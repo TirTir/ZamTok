@@ -15,7 +15,7 @@ namespace Common.Network
         string host = Dns.GetHostName();
         IPHostEntry ipHost = Dns.GetHostEntry(host);
         IPAddress ipAddr = ipHost.AddressList[0];
-        IPEndPoint endPoint = new(ipAddr, port);
+        this.endPoint = new(ipAddr, port);
         
         // TCP 소켓 생성
         socket = new(

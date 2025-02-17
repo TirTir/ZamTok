@@ -1,30 +1,29 @@
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using Common.Network;
+
 namespace ServerNetwork
 {
-  public class ServerManager
+  public class ServerManager : SocketBase
   {
-    private Socket socket;
-    public event Action<string> OnConnected;
-
+    public event Action<string> OnConnected; // 연결 알림
+    public event Action<string> OnMessageReceived; // 메시지 수신 알림
     public void StartServer(int port) {
       try
       {
-        string host = Dns.GetHostName();
-        IPHostEntry ipHost = Dns.GetHostEntry(host);
-        IPAddress ipAddr = ipHost.AddressList[0];
-        IPEndPoint endPoint = new(address: ipAddr, port: port);
+        socket = CreateSocket(port);
+        if (socket == null)
+        {
+          Console.WriteLine("소켓 생성 실패");
+          return;
+        }
 
-        // TCP 소켓 생성
-        socket = new(
-          addressFamily: ipAddr.AddressFamily,
-          socketType: SocketType.Stream,
-          protocolType: ProtocolType.Tcp);
-
-        // 소켓 바인딩
-        socket.Bind(endPoint);
-        socket.Listen(backlog: 10);      
+        socket.Bind(endPoint!);
+        socket.Listen(10);      
         Console.WriteLine($"서버가 {port} 포트에서 시작되었습니다.");
 
-        Task.Run(AcceptClients);
+        Task.Run(() => ConnectClients(socket));
       }
       catch (Exception ex)
       {
@@ -32,19 +31,16 @@ namespace ServerNetwork
       }
     }
 
-    private async Task ConnectClients()
+    private async Task ConnectClients(Socket serverSocket)
     {
       while(true)
       {
         try 
         {
-          // 비동기 처리
-          Socket clientSocket = await Task.Run(() => socket.Accept());
-          // 
+          Socket clientSocket = await Task.Run(() => socket!.Accept());
           OnConnected?.Invoke(clientSocket.RemoteEndPoint?.ToString() ?? "알 수 없는 클라이언트");
           
-          // 각 클라이언트마다 별도의 태스크에서 처리
-          _ = Task.Run(() => HandleClientCommunication(clientSocket));
+          Task.Run(() => SendMessage(clientSocket));
         }
         catch (Exception ex)
         {
@@ -60,15 +56,18 @@ namespace ServerNetwork
         while(true)
         {
           byte[] buffer = new byte[1024];
-          int received = await Task.Run(() => clientSocket.Receive(buffer));
+          int received = await Task.Run(() => clientSocket.Receive(buffer)); // await Task.Run -> 비동기 처리
           
           if (received == 0) break; // 연결 종료
 
-          string message = Encoding.UTF8.GetString(buffer, 0, received).TrimEnd('\0');
+          string message = Encoding.UTF8.GetString(buffer, 0, received).TrimEnd('\0'); // 공백 제거
+          string date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"); // 현재 시간
           Console.WriteLine($"수신: {message}");
 
+          OnMessageReceived?.Invoke(message);
+
           // 에코
-          await Task.Run(() => clientSocket.Send(buffer, 0, received, SocketFlags.None));
+          await socket!.SendAsync(new ArraySegment<byte>(buffer, 0, received), SocketFlags.None); // 클라이언트에게 비동기 메시지 전송
         }
       }
       catch (Exception ex)

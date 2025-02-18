@@ -1,19 +1,37 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Common.Network;
 
 namespace ServerNetwork
 {
-  public class ServerManager : SocketBase
+  public class ServerManager
   {
     public event Action<string> OnConnected; // 연결 알림
     public event Action<string> OnMessageReceived; // 메시지 수신 알림
-    public void StartServer(int port) {
+    
+    protected Socket? socket;
+    protected EndPoint? endPoint;
+    private readonly Dictionary<string, Socket> ConnectedClients = new Dictionary<string, Socket>();
+    private readonly object LockObject = new object();
+    public void StartServer() {
+      int port = 8888;
+      string host = Dns.GetHostName();
+      IPHostEntry ipHost = Dns.GetHostEntry(host);
+      IPAddress ipAddr = IPAddress.Parse("127.0.0.1");
+
       try
       {
-        socket = CreateSocket(port);
-        if (socket == null)
+        // TCP 소켓 생성
+        socket = new(
+          addressFamily: AddressFamily.InterNetwork,
+          socketType: SocketType.Stream,
+          protocolType: ProtocolType.Tcp
+        );
+
+        // 엔드포인트 설정
+        endPoint = new IPEndPoint(ipAddr, port);
+        
+        if (socket == null || endPoint == null)
         {
           Console.WriteLine("소켓 생성 실패");
           return;
@@ -30,7 +48,24 @@ namespace ServerNetwork
         Console.WriteLine($"서버 시작 오류: {ex.Message}");
       }
     }
-
+    private async Task BroadCast(string message)
+    {
+      byte[] buffer = Encoding.UTF8.GetBytes(message);
+      lock(LockObject)
+      {
+        foreach (var client in ConnectedClients.Values)
+        {
+          try
+          {
+            client!.SendAsync(new ArraySegment<byte>(buffer, 0, buffer.Length), SocketFlags.None); // 클라이언트에게 비동기 메시지 전송
+          }
+          catch (Exception ex)
+          {
+            Console.WriteLine($"메시지 전송 오류: {ex.Message}");
+          }
+        }
+      }
+    }
     private async Task ConnectClients(Socket serverSocket)
     {
       while(true)
@@ -40,16 +75,27 @@ namespace ServerNetwork
           Socket clientSocket = await serverSocket.AcceptAsync();
           if (clientSocket.Connected)
           {
-            var clientInfo = clientSocket.RemoteEndPoint?.ToString() ?? "알 수 없는 클라이언트";
-            
-            if (Application.OpenForms.Count > 0)
+            // 유저 정보 - 닉네임
+            byte[] buffer = new byte[1024];
+            int received = await Task.Run(() => clientSocket.Receive(buffer));
+            string clientName = Encoding.UTF8.GetString(buffer, 0, received).TrimEnd('\0');
+
+            lock(LockObject)
             {
-                Application.OpenForms[0].BeginInvoke(new Action(() => {
-                    OnConnected?.Invoke(clientInfo);
-                }));
+              ConnectedClients.Add(clientName, clientSocket);
+              Console.WriteLine($"{clientName} 입장");
             }
             
-            _ = Task.Run(() => ReceiveMessages(clientSocket));
+            // UI 업데이트
+            if (Application.OpenForms.Count > 0)
+            {
+              Application.OpenForms[0].BeginInvoke(new Action(() => {
+                OnConnected?.Invoke(clientName);
+              }));
+            }
+            
+            // 메시지 수신
+            _ = Task.Run(() => ReceiveMessages(clientSocket, clientName));
           }
         }
         catch (Exception ex)
@@ -58,8 +104,7 @@ namespace ServerNetwork
         }
       }
     }
-
-    private async Task ReceiveMessages(Socket clientSocket)
+    private async Task ReceiveMessages(Socket clientSocket, string clientName)
     {
       while(true)
       {
@@ -69,20 +114,10 @@ namespace ServerNetwork
         if (received == 0) break; // 연결 종료
 
         string message = Encoding.UTF8.GetString(buffer, 0, received).TrimEnd('\0'); // 공백 제거
-        string date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"); // 현재 시간
-        Console.WriteLine($"수신: {message}");
+        Console.WriteLine($"[{clientName}] 수신: {message}");
 
-        OnMessageReceived?.Invoke(message);
-
-        // 에코
-        try
-        {
-          await clientSocket!.SendAsync(new ArraySegment<byte>(buffer, 0, received), SocketFlags.None); // 클라이언트에게 비동기 메시지 전송
-        }
-        catch (Exception ex)
-        {
-          Console.WriteLine($"메시지 전송 오류: {ex.Message}");
-        }
+        OnMessageReceived?.Invoke($"{clientName} : {message}");
+        await BroadCast($"{clientName} : {message}");
       }
     }
   }

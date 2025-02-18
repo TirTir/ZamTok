@@ -8,9 +8,10 @@ namespace Client.Forms
   public partial class ClientForm : Form
   {
     private ClientManager manager;
-    private ListBox messages;
-    private TextBox messageTxt;
+    private ListBox messages; // 채팅 목록
+    private TextBox messageTxt; // 입력 필드
     private TextBox portTxt;
+    private TextBox clientNameTxt;
     private TextBox logTxt;
     private Button btnConnect;
     private Button btnSend;
@@ -30,10 +31,9 @@ namespace Client.Forms
 
     private void InitializeUI()
     {
-      // 포트 입력 패널
-      var portPanel = new Panel
+      // 서버 접속 입력 패널
+      var serverPanel = new Panel
       {
-        Text = "연결하기",
         Dock = DockStyle.Top,
         Height = 50
       };
@@ -42,20 +42,27 @@ namespace Client.Forms
       {
         Text = "8888",
         Location = new Point(10, 15),
-        Width = 140,
+        Width = 130,
+      };
+
+      clientNameTxt = new TextBox
+      {
+        Location = new Point(150, 15),
+        Width = 130,
       };
 
       btnConnect = new Button
       {
-        Location = new Point(170, 15),
+        Location = new Point(290, 15),
         Width = 100,
         Height = 30,
         Text = "Connect"
       };
       btnConnect.Click += btnConnectServer;
 
-      portPanel.Controls.Add(portTxt);
-      portPanel.Controls.Add(btnConnect);
+      serverPanel.Controls.Add(portTxt);
+      serverPanel.Controls.Add(clientNameTxt);
+      serverPanel.Controls.Add(btnConnect);
 
       // 로그 & 메시지 영역
       var mainPanel = new Panel
@@ -99,7 +106,7 @@ namespace Client.Forms
 
       Controls.Add(bottomPanel);
       Controls.Add(mainPanel);
-      Controls.Add(portPanel);
+      Controls.Add(serverPanel);
     }
 
     private void btnConnectServer(object sender, EventArgs e)
@@ -110,12 +117,18 @@ namespace Client.Forms
         return;
       }
 
+      if(clientNameTxt.Text == null)
+      {
+        LogMessage("닉네임을 입력하세요.");
+        return;
+      }
+
       try{
         btnConnect.Enabled = false;
         portTxt.Enabled = false;
-      
+        clientNameTxt.Enabled = false;
         LogMessage($"서버 {port}에 연결 시도...");
-        manager.Connect(port);
+        manager.Connect(port, clientNameTxt.Text);
       }
       catch(Exception ex)
       {
@@ -129,12 +142,11 @@ namespace Client.Forms
       if(!string.IsNullOrEmpty(message))
       {
         await manager.SendMessage(message);
-        LogMessage($"전송: {message}");
         messageTxt.Clear();
       }
     }
 
-    private void HandleServerConnected(string serverInfo)
+    private void HandleServerConnected(string clientName)
     {
       LogMessage($"서버에 연결되었습니다.");
     }
@@ -177,7 +189,7 @@ namespace Client.Forms
 
       try
       {
-        LogMessage($"수신: {message}");
+        LogMessage(message);
       }
       catch(Exception ex)
       {

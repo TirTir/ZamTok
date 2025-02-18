@@ -1,0 +1,21 @@
+# 빌드 결과물 제외
+bin/
+obj/
+*.log
+*.tmp
+*.user
+*.vs/
+*.db
+
+# 환경 설정 파일 제외
+appsettings.json
+appsettings.Development.json
+secrets.json
+
+# Visual Studio 관련 파일 제외
+.vscode/
+*.suo
+*.ncb
+*.pdb
+*.cache
+*.csproj.user

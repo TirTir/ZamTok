@@ -97,14 +97,14 @@ namespace Server.Forms
         {
             btnStart.Enabled = false;
 
-            manager.StartServer(8888);
-            LogMessage($"서버가 포트 {8888}에서 시작되었습니다.");
+            manager.StartServer();
+            LogMessage($"서버가 시작되었습니다.");
         }
 
-        private void HandleClientConnected(string clientInfo)
+        private void HandleClientConnected(string clientName)
         {
-            connectedClients.Items.Add(clientInfo);
-            LogMessage($"클라이언트 연결됨: {clientInfo}");
+            connectedClients.Items.Add(clientName);
+            LogMessage($"클라이언트 연결됨: {clientName}");
         }
 
         private void HandleMessageReceived(string message)

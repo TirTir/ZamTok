@@ -10,7 +10,16 @@ namespace Client
         static void Main()
         {
             ApplicationConfiguration.Initialize();
-            Application.Run(new ClientForm());
+
+            // 클라이언트1
+            Thread thread1 = new Thread(() => Application.Run(new ClientForm()));
+            thread1.SetApartmentState(ApartmentState.STA);
+            thread1.Start();
+
+            // 클라이언트2
+            Thread thread2 = new Thread(() => Application.Run(new ClientForm()));
+            thread2.SetApartmentState(ApartmentState.STA);
+            thread2.Start();
         }
   }
 }

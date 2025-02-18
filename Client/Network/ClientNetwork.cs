@@ -1,22 +1,34 @@
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Common.Network;
+
 
 namespace ClientNetwork
 {
-  public class ClientManager : SocketBase
+  public class ClientManager
   {
     public event Action<string> OnConnected;
     public event Action<string> OnDisconnected;
     public event Action<string> OnMessageReceived;
-
-    public void Connect(int port)
+    protected Socket? socket;
+    protected EndPoint? endPoint;
+    public void Connect(int port, string clientName)
     {
+      string host = Dns.GetHostName();
+      IPHostEntry ipHost = Dns.GetHostEntry(host);
+      IPAddress ipAddr = IPAddress.Parse("127.0.0.1");
+
       try
       {
-        socket = CreateSocket(port);
-        Console.WriteLine($"Socket: {socket != null}");
-        Console.WriteLine($"EndPoint: {endPoint != null}");
+        // TCP 소켓 생성
+        socket = new(
+          addressFamily: AddressFamily.InterNetwork,
+          socketType: SocketType.Stream,
+          protocolType: ProtocolType.Tcp
+        );
+
+        // 엔드포인트 설정
+        endPoint = new IPEndPoint(ipAddr, port);
         
         if (socket == null || endPoint == null)
         {
@@ -24,13 +36,15 @@ namespace ClientNetwork
         }
 
         socket.Connect(endPoint);
-        
 
         if (socket.Connected)
         {
-            Console.WriteLine("서버에 연결되었습니다.");
-            OnConnected?.Invoke(socket.RemoteEndPoint?.ToString() ?? "알 수 없는 서버");
-            Task.Run(() => ReceiveMessages(socket));
+          byte[] nameBuffer = Encoding.UTF8.GetBytes(clientName);
+          socket.SendAsync(new ArraySegment<byte>(nameBuffer), SocketFlags.None);
+
+          Console.WriteLine("서버에 연결되었습니다.");
+          OnConnected?.Invoke(clientName);
+          Task.Run(() => ReceiveMessages(socket)); // 메시지 수신
         }
         else
         {
@@ -43,7 +57,6 @@ namespace ClientNetwork
         OnDisconnected?.Invoke("error");
       }
     }
-
     public async Task SendMessage(string message)
     {
       try

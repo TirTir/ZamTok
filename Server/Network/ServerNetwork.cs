@@ -37,10 +37,20 @@ namespace ServerNetwork
       {
         try 
         {
-          Socket clientSocket = await Task.Run(() => socket!.Accept());
-          OnConnected?.Invoke(clientSocket.RemoteEndPoint?.ToString() ?? "알 수 없는 클라이언트");
-          
-          Task.Run(() => SendMessage(clientSocket));
+          Socket clientSocket = await serverSocket.AcceptAsync();
+          if (clientSocket.Connected)
+          {
+            var clientInfo = clientSocket.RemoteEndPoint?.ToString() ?? "알 수 없는 클라이언트";
+            
+            if (Application.OpenForms.Count > 0)
+            {
+                Application.OpenForms[0].BeginInvoke(new Action(() => {
+                    OnConnected?.Invoke(clientInfo);
+                }));
+            }
+            
+            _ = Task.Run(() => ReceiveMessages(clientSocket));
+          }
         }
         catch (Exception ex)
         {
@@ -49,39 +59,30 @@ namespace ServerNetwork
       }
     }
 
-    private async Task SendMessage(Socket clientSocket)
+    private async Task ReceiveMessages(Socket clientSocket)
     {
-      try
+      while(true)
       {
-        while(true)
-        {
-          byte[] buffer = new byte[1024];
-          int received = await Task.Run(() => clientSocket.Receive(buffer)); // await Task.Run -> 비동기 처리
-          
-          if (received == 0) break; // 연결 종료
+        byte[] buffer = new byte[1024];
+        int received = await Task.Run(() => clientSocket.Receive(buffer)); // await Task.Run -> 비동기 처리
 
-          string message = Encoding.UTF8.GetString(buffer, 0, received).TrimEnd('\0'); // 공백 제거
-          string date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"); // 현재 시간
-          Console.WriteLine($"수신: {message}");
+        if (received == 0) break; // 연결 종료
 
-          OnMessageReceived?.Invoke(message);
+        string message = Encoding.UTF8.GetString(buffer, 0, received).TrimEnd('\0'); // 공백 제거
+        string date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"); // 현재 시간
+        Console.WriteLine($"수신: {message}");
 
-          // 에코
-          await socket!.SendAsync(new ArraySegment<byte>(buffer, 0, received), SocketFlags.None); // 클라이언트에게 비동기 메시지 전송
-        }
-      }
-      catch (Exception ex)
-      {
-        Console.WriteLine($"클라이언트 통신 오류: {ex.Message}");
-      }
-      finally
-      {
+        OnMessageReceived?.Invoke(message);
+
+        // 에코
         try
         {
-          clientSocket.Shutdown(SocketShutdown.Both);
-          clientSocket.Close();
+          await clientSocket!.SendAsync(new ArraySegment<byte>(buffer, 0, received), SocketFlags.None); // 클라이언트에게 비동기 메시지 전송
         }
-        catch { }
+        catch (Exception ex)
+        {
+          Console.WriteLine($"메시지 전송 오류: {ex.Message}");
+        }
       }
     }
   }

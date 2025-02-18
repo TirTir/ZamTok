@@ -109,18 +109,30 @@ namespace Server.Forms
 
         private void HandleMessageReceived(string message)
         {
-            LogMessage($"수신된 메시지: {message}");
+            Invoke((MethodInvoker)delegate {
+                LogMessage(message);
+            });
         }
 
         private void LogMessage(string message)
         {
             string date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-
             Console.WriteLine($"LogMessage: {message}");
-            Invoke(new MethodInvoker(delegate ()
+            
+            if (this.InvokeRequired)
             {
-                txtLog!.AppendText("[" + date + "] " + message + "\r\n");
-            }));
+                this.Invoke(new Action<string>(LogMessage), message);
+                return;
+            }
+
+            try
+            {
+                txtLog.AppendText("[" + date + "] " + message + "\r\n");
+            }
+            catch(Exception ex)
+            {
+                LogMessage($"오류: {ex.Message}");
+            }
         }
     }
 }

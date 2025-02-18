@@ -6,23 +6,26 @@ namespace Common.Network
   public class SocketBase
   {
     protected Socket? socket;
-    protected IPEndPoint? endPoint;
+    protected EndPoint? endPoint;
     protected Socket? CreateSocket(int port)
     {
+
       try
       {
-        // 호스트 이름으로 IP 주소 가져오기
         string host = Dns.GetHostName();
         IPHostEntry ipHost = Dns.GetHostEntry(host);
-        IPAddress ipAddr = ipHost.AddressList[0];
-        this.endPoint = new(ipAddr, port);
+        IPAddress ipAddr = IPAddress.Parse("127.0.0.1");
         
         // TCP 소켓 생성
         socket = new(
-            addressFamily: ipAddr.AddressFamily,
+            addressFamily: AddressFamily.InterNetwork,
             socketType: SocketType.Stream,
             protocolType: ProtocolType.Tcp
         );
+
+        // 엔드포인트 설정
+        endPoint = new IPEndPoint(ipAddr, port);
+
         return socket;
       }
       catch (Exception ex)

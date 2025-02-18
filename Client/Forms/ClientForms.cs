@@ -22,6 +22,7 @@ namespace Client.Forms
 
       manager = new ClientManager();
       manager.OnConnected += HandleServerConnected;
+      manager.OnDisconnected += HandleDisConnected;
       manager.OnMessageReceived += HandleMessageReceived;
 
       InitializeUI();
@@ -109,11 +110,17 @@ namespace Client.Forms
         return;
       }
 
-      btnConnect.Enabled = false;
-      portTxt.Enabled = false;
+      try{
+        btnConnect.Enabled = false;
+        portTxt.Enabled = false;
       
-      manager.Connect(port);
-      LogMessage($"서버 {port}에 연결 시도...");
+        LogMessage($"서버 {port}에 연결 시도...");
+        manager.Connect(port);
+      }
+      catch(Exception ex)
+      {
+        LogMessage($"연결 오류: {ex.Message}");
+      }
     }
 
     private async void btnSendMessage(object sender, EventArgs e)
@@ -122,26 +129,82 @@ namespace Client.Forms
       if(!string.IsNullOrEmpty(message))
       {
         await manager.SendMessage(message);
+        LogMessage($"전송: {message}");
         messageTxt.Clear();
       }
     }
 
     private void HandleServerConnected(string serverInfo)
     {
-      messages.Items.Add(serverInfo);
-      LogMessage($"서버 연결됨: {serverInfo}");
+      LogMessage($"서버에 연결되었습니다.");
     }
+
+    private void HandleDisConnected(String type)
+    {
+      if (this.InvokeRequired)
+      {
+        this.Invoke(new Action<string>(HandleDisConnected), type);
+        return;
+      }
+
+      try
+      {
+        btnConnect.Enabled = true;
+        portTxt.Enabled = true;
+
+        if(type == "error")
+        {
+          LogMessage("서버 연결 실패");
+        }
+        else if(type == "exit")
+        {
+          LogMessage("서버 종료");
+        }
+      }
+      catch(Exception ex)
+      {
+        LogMessage($"오류: {ex.Message}");
+      }
+    }
+
     private void HandleMessageReceived(string message)
     {
-      LogMessage(message);
+      if (this.InvokeRequired)
+      {
+        this.Invoke(new Action<string>(HandleMessageReceived), message);
+        return;
+      }
+
+      try
+      {
+        LogMessage($"수신: {message}");
+      }
+      catch(Exception ex)
+      {
+        LogMessage($"오류: {ex.Message}");
+      }
     }
+
 
     private void LogMessage(string message)
     {
       string date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-
       Console.WriteLine($"LogMessage: {message}");
-      messages.Items.Add("[" + date + "] " + message);
+
+      if (this.InvokeRequired)
+      {
+        this.Invoke(new Action<string>(LogMessage), message);
+        return;
+      }
+
+      try
+      {
+        messages.Items.Add("[" + date + "] " + message);
+      }
+      catch(Exception ex)
+      {
+        LogMessage($"오류: {ex.Message}");
+      }
     }
   }
 }

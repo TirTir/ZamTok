@@ -101,10 +101,10 @@ namespace Server.Forms
             LogMessage($"서버가 시작되었습니다.");
         }
 
-        private void HandleClientConnected(string clientName)
+        private void HandleClientConnected(string chatName, string clientName)
         {
-            connectedClients.Items.Add(clientName);
-            LogMessage($"클라이언트 연결됨: {clientName}");
+            connectedClients.Items.Add(clientName); // 연결된 클라이언트
+            LogMessage($"{clientName}님이 {chatName}방에 입장하셨습니다.");
         }
 
         private void HandleMessageReceived(string message)

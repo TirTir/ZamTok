@@ -7,17 +7,20 @@ namespace Server.Forms
     {
         private ServerManager manager;
         private ListBox connectedClients;
-        private TextBox txtLog;
+        private ListBox connectedRooms;
         private Button btnStart;
+        private Button btnStop;
+        private TextBox txtLog;
 
         public ServerForm()
         {
             InitializeComponent();
             this.Text = "채팅 서버";  // 폼 제목 설정
-            this.Size = new Size(650, 600);  // 폼 크기 설정
+            this.Size = new Size(600, 650);  // 폼 크기 설정
             
             manager = new ServerManager();
             manager.OnConnected += HandleClientConnected;
+            manager.OnDisconnected += HandleClientDisconnected;
             manager.OnMessageReceived += HandleMessageReceived;
 
             InitializeUI();
@@ -25,8 +28,8 @@ namespace Server.Forms
 
         private void InitializeUI()
         {
-            // 포트 입력 패널
-            var portPanel = new Panel
+            // 서버 시작/종료 버튼 패널
+            var seraverPanel = new Panel
             {
                 Dock = DockStyle.Top,
                 Height = 50,
@@ -38,23 +41,81 @@ namespace Server.Forms
                 Location = new Point(10, 15),
                 Width = 100,
                 Height = 30,
-                Text = "서버 시작"
+                Text = "Start"
             };
             btnStart.Click += btnStartServer;
 
-            portPanel.Controls.Add(btnStart);
-
-            // 로그 & 클라이언트 목록 영역
-            var mainPanel = new Panel
+            btnStop = new Button
             {
-                Dock = DockStyle.Fill
+                Location = new Point(120, 15),
+                Width = 100,
+                Height = 30,
+                Text = "Stop"
             };
+            btnStop.Click += btnStopServer;
+
+            seraverPanel.Controls.Add(btnStart);
+            seraverPanel.Controls.Add(btnStop);
+
+            // 클라이언트 & 채팅방 목록 영역
+            var tablePanel = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2, // 2개의 열
+            };
+
+            tablePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tablePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
 
             connectedClients = new ListBox
             {
-                Dock = DockStyle.Left,
-                Width = 200,
+                Dock = DockStyle.Fill,
                 Font = new Font("맑은 고딕", 10)
+            };
+
+            connectedRooms = new ListBox
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("맑은 고딕", 10)
+            };
+
+            var lblRooms = new Label
+            {
+                Text = "채팅방 목록",
+                Dock = DockStyle.Top,
+                Font = new Font("맑은 고딕", 10, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+
+            var lblClients = new Label
+            {
+                Text = "연결된 클라이언트",
+                Dock = DockStyle.Top,
+                Font = new Font("맑은 고딕", 10, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+
+            var leftPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+            };
+            leftPanel.Controls.Add(connectedClients);
+            leftPanel.Controls.Add(lblClients);
+
+            var rightPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+            };
+            rightPanel.Controls.Add(connectedRooms);
+            rightPanel.Controls.Add(lblRooms);
+
+            tablePanel.Controls.Add(leftPanel, 0, 0);
+            tablePanel.Controls.Add(rightPanel, 1, 0);
+            
+            var bottomPanel = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 250
             };
 
             txtLog = new TextBox
@@ -66,45 +127,40 @@ namespace Server.Forms
                 Font = new Font("맑은 고딕", 10),
                 BackColor = Color.White
             };
+            bottomPanel.Controls.Add(txtLog);
 
-            var lblClients = new Label
-            {
-                Text = "연결된 클라이언트",
-                Dock = DockStyle.Top,
-                Height = 30,
-                Font = new Font("맑은 고딕", 10, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleCenter
-            };
-
-            var leftPanel = new Panel
-            {
-                Dock = DockStyle.Left,
-                Width = 200
-            };
-            leftPanel.Controls.Add(connectedClients);
-            leftPanel.Controls.Add(lblClients);
-
-            mainPanel.Controls.Add(txtLog);
-            mainPanel.Controls.Add(leftPanel);
-
-            Controls.Add(mainPanel);
-            Controls.Add(portPanel);
-
+            Controls.Add(tablePanel);
+            Controls.Add(seraverPanel);
+            Controls.Add(bottomPanel);
             this.Load += (s, e) => LogMessage("서버 시작 버튼을 눌러주세요.");
         }
 
         private void btnStartServer(object sender, EventArgs e)
         {
             btnStart.Enabled = false;
-
             manager.StartServer();
             LogMessage($"서버가 시작되었습니다.");
         }
-
-        private void HandleClientConnected(string clientName)
+        private void btnStopServer(object sender, EventArgs e)
         {
-            connectedClients.Items.Add(clientName);
-            LogMessage($"클라이언트 연결됨: {clientName}");
+            btnStart.Enabled = true;
+            manager.StopServer();
+            LogMessage($"서버가 종료되었습니다.");
+            this.Load += (s, e) => LogMessage("서버 시작 버튼을 눌러주세요.");
+        }
+
+        private void HandleClientConnected(string chatName, string clientName)
+        {
+            connectedClients.Items.Add(clientName); // 연결된 클라이언트
+            connectedRooms.Items.Add(chatName); // 연결된 채팅방
+            LogMessage($"{clientName}님이 {chatName}에 입장하셨습니다.");
+        }
+
+        private void HandleClientDisconnected(string chatName, string clientName)
+        {
+            connectedClients.Items.Remove(clientName); // 연결된 클라이언트
+            connectedRooms.Items.Remove(chatName); // 연결된 채팅방
+            LogMessage($"{clientName}님이 {chatName}에서 나갔습니다.");
         }
 
         private void HandleMessageReceived(string message)

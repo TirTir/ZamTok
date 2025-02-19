@@ -23,7 +23,7 @@ namespace Client.Forms
       this.Size = new Size(600, 600);
 
       manager = new ClientManager();
-      manager.OnConnected += HandleServerConnected;
+      // manager.OnConnected += HandleServerConnected;
       manager.OnDisconnected += HandleDisConnected;
       manager.OnMessageReceived += HandleMessageReceived;
 
@@ -187,7 +187,7 @@ namespace Client.Forms
         }
         else if(type == "exit")
         {
-          LogMessage("서버 종료");
+          LogMessage("서버가 종료되었습니다.");
         }
       }
       catch(Exception ex)

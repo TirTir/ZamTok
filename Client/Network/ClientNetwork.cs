@@ -7,7 +7,7 @@ namespace ClientNetwork
 {
   public class ClientManager
   {
-    public event Action<string> OnConnected;
+    // public event Action<string> OnConnected;
     public event Action<string> OnDisconnected;
     public event Action<string> OnMessageReceived;
     protected Socket? socket;
@@ -48,12 +48,12 @@ namespace ClientNetwork
           byte[] buffer = Encoding.UTF8.GetBytes(clientInfo);
           socket.SendAsync(new ArraySegment<byte>(buffer), SocketFlags.None);
 
-          OnConnected?.Invoke(clientName);
+          // OnConnected?.Invoke(clientName);
           Task.Run(() => ReceiveMessages(socket)); // 메시지 수신
         }
         else
         {
-            throw new SocketException();
+          throw new SocketException();
         }
       }
       catch (Exception ex)
@@ -99,6 +99,13 @@ namespace ClientNetwork
 
           string message = Encoding.UTF8.GetString(buffer, 0, received);
           OnMessageReceived?.Invoke(message);
+        }
+
+        // 연결 해제 시
+        if (serverSocket.Connected == false)
+        {
+          OnDisconnected?.Invoke("exit");
+          Disconnect();
         }
       }
       catch (Exception ex)

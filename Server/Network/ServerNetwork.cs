@@ -8,10 +8,11 @@ namespace ServerNetwork
   {
     public event Action<string, string> OnConnected; // 연결 알림
     public event Action<string> OnMessageReceived; // 메시지 수신 알림
+    public event Action<string, string> OnDisconnected; // 연결 해제 알림
     protected Socket? socket;
     protected EndPoint? endPoint;
     // 채팅방 고유 ID / 채팅방 내 유저 목록
-    private readonly Dictionary<int, List<(string, Socket)>> ConnectedClients = new Dictionary<int, List<(string, Socket)>>();
+    private readonly Dictionary<int, Dictionary<(string, Socket)>> ConnectedClients = new Dictionary<int, Dictionary<(string, Socket)>>();
     private readonly Dictionary<string, int> ChatRooms = new Dictionary<string, int>();
     private readonly object LockObject = new object();
     public void StartServer() {
@@ -49,6 +50,12 @@ namespace ServerNetwork
         Console.WriteLine($"서버 시작 오류: {ex.Message}");
       }
     }
+    public void StopServer()
+    {
+      socket?.Shutdown(SocketShutdown.Both);
+      socket?.Close();
+      socket = null;
+    }
     private async Task BroadCast(int chatRoomId, string message)
     {
       byte[] buffer = Encoding.UTF8.GetBytes(message);
@@ -71,6 +78,10 @@ namespace ServerNetwork
     }
     private async Task ConnectClients(Socket serverSocket)
     {
+      string chatName = "";
+      string clientName = "";
+      int chatRoomId = 0;
+
       while(true)
       {
         try 
@@ -85,9 +96,8 @@ namespace ServerNetwork
 
             // 채팅방 고유 ID / 채팅방 내 유저 목록
             string[] info = clientInfo.Split('|');
-            string chatName = info[0];
-            string clientName = info[1];
-            int chatRoomId = 0;
+            chatName = info[0];
+            clientName = info[1];
 
             // 동시성 제어
             lock(LockObject)
@@ -102,7 +112,6 @@ namespace ServerNetwork
 
               chatRoomId = ChatRooms[chatName];
               ConnectedClients[chatRoomId].Add((clientName, clientSocket));
-              Console.WriteLine($"{clientName}님이 {chatName}방에 입장하셨습니다.");
             }
             
             // UI 업데이트
@@ -113,8 +122,23 @@ namespace ServerNetwork
               }));
             }
             
+            // 입장 알림
+            Console.WriteLine($"{clientName}님이 {chatName}방에 입장하셨습니다.");
+            OnMessageReceived?.Invoke($"{clientName}님이 {chatName}방에 입장하셨습니다.");
+            await BroadCast(chatRoomId, $"{clientName}님이 {chatName}방에 입장하셨습니다.");
+            
             // 메시지 수신 시작
             _ = Task.Run(() => ReceiveMessages(clientSocket, chatRoomId, clientName));
+          }
+
+          // 연결 해제 시
+          if (clientSocket.Connected == false)
+          {
+            lock(LockObject)
+            {
+              ConnectedClients[chatRoomId].Remove((clientName, clientSocket));
+              OnDisconnected?.Invoke(chatName, clientName);
+            }
           }
         }
         catch (Exception ex)

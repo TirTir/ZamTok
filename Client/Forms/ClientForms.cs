@@ -10,10 +10,11 @@ namespace Client.Forms
     private ClientManager manager;
     private ListBox messages; // 채팅 목록
     private TextBox messageTxt; // 입력 필드
-    private TextBox portTxt;
+    private TextBox chatNameTxt;
     private TextBox clientNameTxt;
     private TextBox logTxt;
     private Button btnConnect;
+    private Button btnDisconnect;
     private Button btnSend;
     public ClientForm()
     {
@@ -38,9 +39,8 @@ namespace Client.Forms
         Height = 50
       };
 
-      portTxt = new TextBox
+      chatNameTxt = new TextBox
       {
-        Text = "8888",
         Location = new Point(10, 15),
         Width = 130,
       };
@@ -60,10 +60,19 @@ namespace Client.Forms
       };
       btnConnect.Click += btnConnectServer;
 
-      serverPanel.Controls.Add(portTxt);
+      btnDisconnect = new Button
+      {
+        Location = new Point(400, 15),
+        Width = 100,
+        Height = 30,
+        Text = "Exit"
+      };
+      btnDisconnect.Click += btnDisconnectServer;
+
+      serverPanel.Controls.Add(chatNameTxt);
       serverPanel.Controls.Add(clientNameTxt);
       serverPanel.Controls.Add(btnConnect);
-
+      serverPanel.Controls.Add(btnDisconnect);
       // 로그 & 메시지 영역
       var mainPanel = new Panel
       {
@@ -111,9 +120,10 @@ namespace Client.Forms
 
     private void btnConnectServer(object sender, EventArgs e)
     {
-      if (!int.TryParse(portTxt.Text, out int port))
+
+      if(chatNameTxt.Text == null)
       {
-        LogMessage("올바른 포트 번호를 입력하세요.");
+        LogMessage("채팅방 이름을 입력하세요.");
         return;
       }
 
@@ -125,15 +135,21 @@ namespace Client.Forms
 
       try{
         btnConnect.Enabled = false;
-        portTxt.Enabled = false;
+        chatNameTxt.Enabled = false;
         clientNameTxt.Enabled = false;
-        LogMessage($"서버 {port}에 연결 시도...");
-        manager.Connect(port, clientNameTxt.Text);
+        LogMessage($"{chatNameTxt.Text}방에 입장...");
+        manager.Connect(chatNameTxt.Text, clientNameTxt.Text);
       }
       catch(Exception ex)
       {
         LogMessage($"연결 오류: {ex.Message}");
       }
+    }
+
+    private void btnDisconnectServer(object sender, EventArgs e)
+    {
+      manager.Disconnect();
+      LogMessage("서버 연결 해제");
     }
 
     private async void btnSendMessage(object sender, EventArgs e)
@@ -162,7 +178,8 @@ namespace Client.Forms
       try
       {
         btnConnect.Enabled = true;
-        portTxt.Enabled = true;
+        chatNameTxt.Enabled = true;
+        clientNameTxt.Enabled = true;
 
         if(type == "error")
         {

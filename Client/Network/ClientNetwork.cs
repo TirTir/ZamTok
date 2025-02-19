@@ -12,8 +12,9 @@ namespace ClientNetwork
     public event Action<string> OnMessageReceived;
     protected Socket? socket;
     protected EndPoint? endPoint;
-    public void Connect(int port, string clientName)
+    public void Connect(string chatName, string clientName)
     {
+      int port = 8888;
       string host = Dns.GetHostName();
       IPHostEntry ipHost = Dns.GetHostEntry(host);
       IPAddress ipAddr = IPAddress.Parse("127.0.0.1");
@@ -37,12 +38,16 @@ namespace ClientNetwork
 
         socket.Connect(endPoint);
 
+        // 소켓 연결 완료시 채팅방, 닉네임 전송
         if (socket.Connected)
         {
-          byte[] nameBuffer = Encoding.UTF8.GetBytes(clientName);
-          socket.SendAsync(new ArraySegment<byte>(nameBuffer), SocketFlags.None);
-
           Console.WriteLine("서버에 연결되었습니다.");
+          
+          // 구분자 사용 -> 하나의 패킷으로 전송
+          string clientInfo = $"{chatName}|{clientName}";
+          byte[] buffer = Encoding.UTF8.GetBytes(clientInfo);
+          socket.SendAsync(new ArraySegment<byte>(buffer), SocketFlags.None);
+
           OnConnected?.Invoke(clientName);
           Task.Run(() => ReceiveMessages(socket)); // 메시지 수신
         }
@@ -57,6 +62,14 @@ namespace ClientNetwork
         OnDisconnected?.Invoke("error");
       }
     }
+    public void Disconnect()
+    {
+      socket?.Shutdown(SocketShutdown.Both);
+      socket?.Close();
+      socket = null;
+
+      OnDisconnected?.Invoke("exit");
+    }
     public async Task SendMessage(string message)
     {
       try
@@ -69,7 +82,6 @@ namespace ClientNetwork
         Console.WriteLine($"메시지 전송 오류: {ex.Message}");
       }
     }
-
     private async Task ReceiveMessages(Socket serverSocket)
     {
       try

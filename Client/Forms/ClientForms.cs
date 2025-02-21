@@ -36,18 +36,36 @@ namespace Client.Forms
       var serverPanel = new Panel
       {
         Dock = DockStyle.Top,
-        Height = 50
+        Height = 60
+      };
+
+      var lblChatName = new Label
+      {
+        Text = "채팅방 이름",
+        Location = new Point(10, 5),
+        Width = 90,
+        Font = new Font("맑은 고딕", 10, FontStyle.Bold),
+        TextAlign = ContentAlignment.MiddleLeft
       };
 
       chatNameTxt = new TextBox
       {
-        Location = new Point(10, 15),
+        Location = new Point(10, 30),
         Width = 130,
+      };
+
+      var lblNickname = new Label
+      {
+        Text = "닉네임",
+        Location = new Point(160, 5),
+        Width = 130,
+        Font = new Font("맑은 고딕", 10, FontStyle.Bold),
+        TextAlign = ContentAlignment.MiddleLeft
       };
 
       clientNameTxt = new TextBox
       {
-        Location = new Point(150, 15),
+        Location = new Point(150, 30),
         Width = 130,
       };
 
@@ -69,10 +87,13 @@ namespace Client.Forms
       };
       btnDisconnect.Click += btnDisconnectServer;
 
+      serverPanel.Controls.Add(lblChatName);
       serverPanel.Controls.Add(chatNameTxt);
+      serverPanel.Controls.Add(lblNickname);
       serverPanel.Controls.Add(clientNameTxt);
       serverPanel.Controls.Add(btnConnect);
       serverPanel.Controls.Add(btnDisconnect);
+
       // 로그 & 메시지 영역
       var mainPanel = new Panel
       {

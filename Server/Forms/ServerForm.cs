@@ -152,15 +152,17 @@ namespace Server.Forms
         private void HandleClientConnected(string chatName, string clientName)
         {
             connectedClients.Items.Add(clientName); // 연결된 클라이언트
-            connectedRooms.Items.Add(chatName); // 연결된 채팅방
+            if(!connectedRooms.Items.Contains(chatName))
+            {
+                connectedRooms.Items.Add(chatName); // 연결된 채팅방
+            }
             LogMessage($"{clientName}님이 {chatName}에 입장하셨습니다.");
         }
 
-        private void HandleClientDisconnected(string chatName, string clientName)
+        private void HandleClientDisconnected(string clientName)
         {
-            connectedClients.Items.Remove(clientName); // 연결된 클라이언트
-            connectedRooms.Items.Remove(chatName); // 연결된 채팅방
-            LogMessage($"{clientName}님이 {chatName}에서 나갔습니다.");
+            connectedClients.Items.Remove(clientName);
+            LogMessage($"{clientName}님이 채팅방을 나갔습니다.");
         }
 
         private void HandleMessageReceived(string message)

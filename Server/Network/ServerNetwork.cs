@@ -8,11 +8,12 @@ namespace ServerNetwork
   {
     public event Action<string, string> OnConnected; // 연결 알림
     public event Action<string> OnMessageReceived; // 메시지 수신 알림
-    public event Action<string, string> OnDisconnected; // 연결 해제 알림
+    public event Action<string> OnDisconnected; // 연결 해제 알림
     protected Socket? socket;
     protected EndPoint? endPoint;
     // 채팅방 고유 ID / 채팅방 내 유저 목록
-    private readonly Dictionary<int, Dictionary<(string, Socket)>> ConnectedClients = new Dictionary<int, Dictionary<(string, Socket)>>();
+    private readonly Dictionary<int, List<(string, Socket)>> ConnectedClients = new Dictionary<int, List<(string, Socket)>>();
+
     private readonly Dictionary<string, int> ChatRooms = new Dictionary<string, int>();
     private readonly object LockObject = new object();
     public void StartServer() {
@@ -123,9 +124,9 @@ namespace ServerNetwork
             }
             
             // 입장 알림
-            Console.WriteLine($"{clientName}님이 {chatName}방에 입장하셨습니다.");
-            OnMessageReceived?.Invoke($"{clientName}님이 {chatName}방에 입장하셨습니다.");
-            await BroadCast(chatRoomId, $"{clientName}님이 {chatName}방에 입장하셨습니다.");
+            Console.WriteLine($"{clientName}님이 {chatName}에 입장하셨습니다.");
+            OnMessageReceived?.Invoke($"{clientName}님이 {chatName}에 입장하셨습니다.");
+            await BroadCast(chatRoomId, $"{clientName}님이 {chatName}에 입장하셨습니다.");
             
             // 메시지 수신 시작
             _ = Task.Run(() => ReceiveMessages(clientSocket, chatRoomId, clientName));
@@ -137,7 +138,7 @@ namespace ServerNetwork
             lock(LockObject)
             {
               ConnectedClients[chatRoomId].Remove((clientName, clientSocket));
-              OnDisconnected?.Invoke(chatName, clientName);
+              OnDisconnected?.Invoke(clientName);
             }
           }
         }
@@ -151,10 +152,24 @@ namespace ServerNetwork
     {
       while(true)
       {
+        // if(clientSocket.Connected == false) {
+        //   Console.WriteLine($"{clientName}님이 채팅방을 나갔습니다.");
+        //   await BroadCast(chatRoomId, $"{clientName}님이 채팅방을 나갔습니다.");
+        //   OnDisconnected?.Invoke(clientName);
+        //   break;
+        // }
+
         byte[] buffer = new byte[1024];
         int received = await Task.Run(() => clientSocket.Receive(buffer)); // await Task.Run -> 비동기 처리
 
-        if (received == 0) break; // 연결 종료
+        if (received == 0) 
+        {
+          // 클라이언트가 연결을 끊음
+          Console.WriteLine($"{clientName}님이 채팅방을 나갔습니다.");
+          await BroadCast(chatRoomId, $"{clientName}님이 채팅방을 나갔습니다.");
+          OnDisconnected?.Invoke(clientName);
+          break;
+        }
 
         string message = Encoding.UTF8.GetString(buffer, 0, received).TrimEnd('\0'); // 공백 제거
         Console.WriteLine($"[{clientName}] 수신: {message}");

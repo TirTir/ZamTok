@@ -1,0 +1,48 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_OUTPUT_EXCMD	mixed	/number, pattern, mixed, or combineV2/
+!_TAG_OUTPUT_FILESEP	slash	/slash or backslash/
+!_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
+!_TAG_PATTERN_LENGTH_LIMIT	96	/0 for no limit/
+!_TAG_PROC_CWD	/home/user/dev/ZamTok/src/SERVER/	//
+!_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
+!_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
+!_TAG_PROGRAM_URL	https://ctags.io/	/official site/
+!_TAG_PROGRAM_VERSION	5.9.0	//
+ATOI	ZT_atoi.c	/^int ATOI( char *pStr, int *pnResult) {$/;"	f	typeref:enum:__anone708ccf00203 int
+ATOI_OK	ZT_atoi.c	/^	ATOI_OK = 0,$/;"	e	enum:__anone708ccf00203	file:
+ERR_ATOI_ARG	ZT_atoi.c	/^	ERR_ATOI_ARG,$/;"	e	enum:__anone708ccf00203	file:
+ERR_EXCESS_RANGE	ZT_atoi.c	/^	ERR_EXCESS_RANGE,$/;"	e	enum:__anone708ccf00203	file:
+ERR_INVALID_NUM	ZT_atoi.c	/^	ERR_INVALID_NUM,$/;"	e	enum:__anone708ccf00203	file:
+ERR_SOCKET_BIND	ZT_evt.c	/^	ERR_SOCKET_BIND,$/;"	e	enum:__anonb1f477920103	file:
+ERR_SOCKET_CONNECT	ZT_evt.c	/^	ERR_SOCKET_CONNECT,$/;"	e	enum:__anonb1f477920103	file:
+ERR_SOCKET_CREATE	ZT_evt.c	/^	ERR_SOCKET_CREATE,$/;"	e	enum:__anonb1f477920103	file:
+ERR_SOCKET_INIT	ZT_evt.c	/^	ERR_SOCKET_INIT,$/;"	e	enum:__anonb1f477920103	file:
+HDL_404	ZT_hdl.c	/^void HDL_404( )$/;"	f	typeref:typename:void
+HDL_HEADER	ZT_hdl.c	/^int HDL_HEADER( char *pheader, int nStatus, long llen, char *pType )$/;"	f	typeref:typename:int
+HDL_HEADER_MIME	ZT_hdl.c	/^int HDL_HEADER_MIME( char *pContentType, const char *pUri, size_t tContentLen )$/;"	f	typeref:typename:int
+HDL_SOCKET	ZT_evt.c	/^int HDL_SOCKET ( int socket )$/;"	f	typeref:typename:int
+IS_NULL	ZT_queue.c	/^#define IS_NULL(/;"	d	file:
+LOG_ERR	ZT_log.h	/^#define LOG_ERR(/;"	d
+LOG_ERR	ZT_queue.c	/^#define LOG_ERR(/;"	d	file:
+MUTEX_UNLOCK	ZT_queue.c	/^#define MUTEX_UNLOCK(/;"	d	file:
+SEM_POST	ZT_queue.c	/^#define SEM_POST(/;"	d	file:
+SOCKET_Init	ZT_evt.c	/^int SOCKET_Init ( )$/;"	f	typeref:typename:int
+SOCKET_OK	ZT_evt.c	/^	SOCKET_OK = 0,$/;"	e	enum:__anonb1f477920103	file:
+_ZT_INC_H_	ZT_Inc.h	/^#define _ZT_INC_H_$/;"	d
+_ZT_LOG_H_	ZT_log.h	/^#define _ZT_LOG_H_$/;"	d
+_ZT_QUEUE_H_	ZT_queue.h	/^#define _ZT_QUEUE_H_$/;"	d
+__anonb1f477920103	ZT_evt.c	/^typedef enum {$/;"	g	file:
+__anone708ccf00203	ZT_atoi.c	/^typedef enum {$/;"	g	file:
+cmd	ZT_evt.c	/^	int cmd;$/;"	v	typeref:typename:int
+dequeue	ZT_queue.c	/^int dequeue(Queue *queue, address_info_t *data) { \/\/ consumer$/;"	f	typeref:typename:int
+destroy_queue	ZT_queue.c	/^int destroy_queue(Queue *queue) {$/;"	f	typeref:typename:int
+enqueue	ZT_queue.c	/^int enqueue(Queue *queue, address_info_t *data) { \/\/ producer$/;"	f	typeref:typename:int
+init_queue	ZT_queue.c	/^int init_queue(Queue *queue) {$/;"	f	typeref:typename:int
+is_empty	ZT_queue.c	/^int is_empty(Queue *queue, bool *flag) {$/;"	f	typeref:typename:int
+is_full	ZT_queue.c	/^int is_full(Queue *queue, bool *flag) {$/;"	f	typeref:typename:int
+main	ZT_main.c	/^int main( int argc, char **argv )$/;"	f	typeref:typename:int
+pDoc	ZT_evt.c	/^	char *pDoc;$/;"	v	typeref:typename:char *
+pName	ZT_evt.c	/^	char *pName;$/;"	v	typeref:typename:char *
+rc	ZT_evt.c	/^	int rc = 0;$/;"	v	typeref:typename:int
+sin	ZT_evt.c	/^	struct sockaddr_in sin;$/;"	v	typeref:struct:sockaddr_in

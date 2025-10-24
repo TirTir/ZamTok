@@ -79,7 +79,6 @@ int HDL_HEADER_MIME( char *pContentType, const char *pUri, size_t tContentLen )
 ===================================================*/
 int HDL_SOCKET ( int socket )
 {
-
 	ReqType_t tMsg;
     
 	/*
@@ -91,15 +90,15 @@ int HDL_SOCKET ( int socket )
     char contentType[MAX_CONTENT_TYPE_LEN];
 	*/
 
-    struct stat st;
-
-    if( socket < 0 )
+    int fd = -1;
+	
+	if( socket < 0 )
 	{
         printf("[HDL_SOCKET] Socket is Wrong\n");
         return ERR_SOCKET_ARG;
     }
 
-	
+	/* 요청 수신 */	
 	size_t n = read( socket, buf, sizeof(buf) - 1 );
     if( n <= 0 )
     {
@@ -115,26 +114,33 @@ int HDL_SOCKET ( int socket )
 
     snprintf( parse, sizeof(parse), "%s", buf );
 
-    /* Data Parsing */
     char *method = strtok( parse, " " );
     char *url = strtok( NULL, " " );
+	char *version = strtok( NULL, "\r\n" );
 
-    if( !method || !url )
+    if( !method || !url || !version )
     {
         printf("[HDL_SOCKET] Invalid Request Line\n");
         HDL_400( socket );
         return;
     }
 
+    /* Data Parsing */
+	snprintf( req.method, sizeof(req.method), "%s", method );
+	snprintf( req.url, sizeof(req.uri), "%s", url );
+	snprintf( req.version, sizeof(req.version), "%s", version );
+
+    printf("====================== HDL_SOCKET_Request Parsing ======================\n");
+	printf("Method: %s, URI: %s\n", req.method, req.uri);
+
+	/* 요청 경로 설정 */
     snprintf( pTempUrl, sizeof(pTempUrl), "%s", url );
     if( !strcmp( pTempUrl, "/"))
     {
         snprintf( pTempUrl, sizeof(pTempUrl), "%s", "/indx.html" );
     }
 
-    printf("====================== HDL_SOCKET_Request Parsing ======================\n");
-    printf("\nMethod: %s, URI: %s\n", method, pTempUrl );
-
+	
     nContentLen = st.st_size;
     HDL_HEADER_MIME( contentType, localUrL );
     HDL_HEADER( header, 200, nContentLen, contentType );
@@ -144,9 +150,18 @@ int HDL_SOCKET ( int socket )
     {
         write( socket, buf, cnt );
     }
+
+	return SOCKET_OK;
 }
 
-void HDL_404( )
+void HDL_400( int socket )
 {
+    const char *msg = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n";
+    write( socket, msg, strlen(msg) );
+}
 
+
+void HDL_500( int socket ) {
+    const char *msg = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n";
+    write( socket, msg, strlen(msg) );
 }

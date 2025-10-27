@@ -77,67 +77,79 @@ int HDL_HEADER_MIME( char *pContentType, const char *pUri, size_t tContentLen )
 * return :
 * param :
 ===================================================*/
-int HDL_SOCKET ( int socket )
+int HDL_SOCKET ( int epfd, int socket )
 {
-	ReqType_t tMsg;
+	struct ReqType_t tMsg;
     
-    int fd = -1;
-	
+	char buf[BUF_MAX_SIZE] = {0};
+    size_t n = 0;
+    
+    if( epfd < 0 )
+    {
+        printf("[HDL_SOCKET] Epoll FD is Wrong\n");
+        return ERR_SOCKET_ARG;
+    }
+  
 	if( socket < 0 )
 	{
-        printf("[HDL_SOCKET] Socket is Wrong\n");
+        printf("[HDL_SOCKET] Socket FD is Wrong\n");
         return ERR_SOCKET_ARG;
     }
 
 	/* 요청 수신 */	
-	size_t n = read( socket, buf, sizeof(buf) - 1 );
-    if( n <= 0 )
+    while(( n = read( socket, buf, sizeof(buf) ) > 0))
     {
-        printf("[HDL_SOCKET] Read Socket Buf Fail\n");
-        HDL_500( socket );
-        return;
-    }
+        if( n == 0 )
+        {
+            printf("[DICONNECT] FD=%d closed\n", socket );
+            return SOCKET_CLOSED;
+        }
+        else if( n < 0 && errno != EAGAIN )
+        {
+            printf("[HDL_SOCKET] Read Socket Fail FD=%d <%d:%s>\n", socket, errno, strerror(errno));
+            return ERR_SOCKET_READ;
+        }
 
-    buf[n] = '\0';
+        buf[n] = '\0';
 
+    	printf("====================== HDL_SOCKET_Request ======================\n");
+        printf("%s\n", buf);
+
+        snprintf( parse, sizeof(parse), "%s", buf );
+
+        char *method = strtok( parse, " " );
+        char *url = strtok( NULL, " " );
+	    char *version = strtok( NULL, "\r\n" );
+
+        if( !method || !url || !version )
+        {
+            printf("[HDL_SOCKET] Invalid Request Line\n");
+            HDL_400( socket );
+            return;
+        }
+
+        /* Data Parsing */
+	    snprintf( req.method, sizeof(req.method), "%s", method );
+	    snprintf( req.url, sizeof(req.uri), "%s", url );
+	    snprintf( req.version, sizeof(req.version), "%s", version );
+
+        printf("====================== HDL_SOCKET_Request Parsing ======================\n");
+	    printf("Method: %s, URI: %s\n", req.method, req.uri);
+
+	    /* 요청 경로 설정 */
+        snprintf( pTempUrl, sizeof(pTempUrl), "%s", url );
+        if( !strcmp( pTempUrl, "/"))
+        {
+            snprintf( pTempUrl, sizeof(pTempUrl), "%s", "/indx.html" );
+        }
 
 	
-	printf("====================== HDL_SOCKET_Request ======================\n");
-    printf("%s\n", buf);
+        nContentLen = st.st_size;
+        HDL_HEADER_MIME( contentType, localUrL );
+        HDL_HEADER( header, 200, nContentLen, contentType );
+        write( socket, header, strlen( header ));
 
-    snprintf( parse, sizeof(parse), "%s", buf );
-
-    char *method = strtok( parse, " " );
-    char *url = strtok( NULL, " " );
-	char *version = strtok( NULL, "\r\n" );
-
-    if( !method || !url || !version )
-    {
-        printf("[HDL_SOCKET] Invalid Request Line\n");
-        HDL_400( socket );
-        return;
     }
-
-    /* Data Parsing */
-	snprintf( req.method, sizeof(req.method), "%s", method );
-	snprintf( req.url, sizeof(req.uri), "%s", url );
-	snprintf( req.version, sizeof(req.version), "%s", version );
-
-    printf("====================== HDL_SOCKET_Request Parsing ======================\n");
-	printf("Method: %s, URI: %s\n", req.method, req.uri);
-
-	/* 요청 경로 설정 */
-    snprintf( pTempUrl, sizeof(pTempUrl), "%s", url );
-    if( !strcmp( pTempUrl, "/"))
-    {
-        snprintf( pTempUrl, sizeof(pTempUrl), "%s", "/indx.html" );
-    }
-
-	
-    nContentLen = st.st_size;
-    HDL_HEADER_MIME( contentType, localUrL );
-    HDL_HEADER( header, 200, nContentLen, contentType );
-    write( socket, header, strlen( header ));
 
     while(( cnt = read( fd, buf, BUF_XIZE)) > 0)
     {

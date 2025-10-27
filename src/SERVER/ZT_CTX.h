@@ -1,7 +1,22 @@
 #ifndef _ZT_CTX_H_
 #define _ZT_CTX_H_
 
-#define NAME_MAX_LEN 12
+typedef enum {
+    SOCKET_OK = 0,
+    ERR_SOCKET_INIT,
+    ERR_SOCKET_BIND,
+    ERR_SOCKET_CREATE,
+    ERR_SOCKET_CONNECT,
+    ERR_SOCKET_ACCEPT,
+}
+
+#define NAME_MAX_LEN 16
+#define VALUE_MAX_LEN
+#define METHOD_MAX_LEN
+#define URI_MAX_LEN
+#define VERSION_MAX_LEN
+#define REASON_MAX_LEN
+#define BODY_MAX_LEN
 
 typedef struct {
     char name[NAME_MAX_LEN];
@@ -25,6 +40,9 @@ typedef struct {
     int nHeaderCnt;
     char body[BODY_MAX_LEN];
 } ResType_t;
+
+#define BUF_MAX_LEN 1024
+#define FILE_MAX_LEN 256
 
 typedef struct {
 	int nClientFD;

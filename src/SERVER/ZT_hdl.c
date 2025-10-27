@@ -81,15 +81,6 @@ int HDL_SOCKET ( int socket )
 {
 	ReqType_t tMsg;
     
-	/*
-	char header[MAX_BUF_SIZE];
-    char parse[MAX_BUF_SIZE], buf[MAX_BUF_SIZE];
-    char *pTempUrl, *pLocalUrl;
-
-    int cnt, nContentLen = 0;
-    char contentType[MAX_CONTENT_TYPE_LEN];
-	*/
-
     int fd = -1;
 	
 	if( socket < 0 )
@@ -109,7 +100,9 @@ int HDL_SOCKET ( int socket )
 
     buf[n] = '\0';
 
-    printf("====================== HDL_SOCKET_Request ======================\n");
+
+	
+	printf("====================== HDL_SOCKET_Request ======================\n");
     printf("%s\n", buf);
 
     snprintf( parse, sizeof(parse), "%s", buf );

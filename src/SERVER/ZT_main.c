@@ -1,14 +1,17 @@
 #include <stdio.h>
+#include "ZT_Inc.h"
 
+int g_nClients;
 
 int main( int argc, char **argv )
 {
 	int rc = -1, socket = -1;
 	int port = 0;
 
+	int nClientSockets[MAX_CLIENT];
+
 	port = ATOI(argv[1]);
 	printf( "[INFO] The Server Will Listen to Port: %d\n", port );
-
 	
 	rc = SOCKET_Init( &socket );
 	if( rc < 0 )

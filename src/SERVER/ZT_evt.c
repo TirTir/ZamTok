@@ -1,14 +1,14 @@
 #include <stdio.h>
-
-/*
-typedef enum {
-	SOCKET_OK = 0,
-	ERR_SOCKET_INIT,
-	ERR_SOCKET_BIND,
-	ERR_SOCKET_CREATE,
-	ERR_SOCKET_CONNECT,
-}
-*/
+#include <sdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+#include <fnctl.h>
+#include <sys/epoll.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 typedef struct {
 	char *pName;
@@ -19,6 +19,34 @@ typedef struct {
 stCommand_t gpCommands [] = {
 	{ "help", 1, "							:This Screen" },
 	{ (char*)NULL, 0, NULL }	
+}
+
+extern g_nClients;
+
+int SET_NONBLOCKING (int socket )
+{
+	int flags = -1;
+
+	if( socket < 0 )
+	{
+		printf("[SET_NONBLOCKING] Socket is Wrong\n");
+		return ERR_NONBLOCKING_ARGS;
+	}
+
+	/* Get Original FD Status */
+	flags = fnctl( socket, F_GETFL, 0 );
+	if( flags < 0 )
+	{
+		printf("[SET_NONBLOCKING] Fnctl Get Fail\n");
+		return ERR_NONBLOCKING;
+	}
+
+	rc = fnctl( socket, F_SETFL, flags | O_NONBLOCK );
+	if( rc < 0 )
+	{
+		printf("[SET_NONBLOCKING] Fnctl Nonblock Set Fail\n");
+		return ERR_NONBLOCKING;
+	}
 }
 
 int SOCKET_Bind ( int socket, int port )
@@ -50,7 +78,8 @@ int SOCKET_Bind ( int socket, int port )
 
 int SOCKET_Init ( int *socket )
 {
-	int fd = -1, rc = 0;
+	int i, rc = 0;
+	int fd = -1;
 	int opt = 1, flag = 0;
 	
 	if( socket == NULL )
@@ -74,12 +103,20 @@ int SOCKET_Init ( int *socket )
 		return ERR_SOCKET_INIT;
 	}
 	
+	for(i = 0; i < MAX_CLIENTS; i++)
+	{
+		g_nClients[i] = -1;
+	}
+
 	return SOCKET_OK;
 
 }
 
-int SOCKET_Accept ( int socket, int *pnNewfd )
+int SOCKET_Accept ( int socket, int epfd )
 {
+	struct sockaddr_in tClientAddr;
+	socklen_t addrlen = sizeof(tClientAddr);
+
 	int fd = -1, rc = 0;
 
 	if ( socket < 0 )
@@ -88,20 +125,137 @@ int SOCKET_Accept ( int socket, int *pnNewfd )
 		return ERR_SOCKET_ARG;
 	}
 
-	if ( pnNewfd == NULL )
+	if ( epfd < 0 )
 	{
-		printf("[SOCKET_Accept] New FD is NULL\n");
+		printf("[SOCKET_Accept] Epoll FD is Wrong\n");
 		return ERR_SOCKET_ARG;
 	}
 
-	printf("======================= Waiting Connecting =======================\n");
+	printf("======================= Connecting =======================\n");
+	printf("FD=%d from %s:%d\n", fd, inet_ntoa(tClientAddr.sin_addr), ntohs(tClientAddr.sin_port));
+	
 	fd = accept( socket, NULL, NULL );
-	if( fd < 0 )
+
+	while( fd > 0 )
+	{
+		/* Edge Trigger */
+
+		tEv.events = EPOLLIN | EPOLLET;
+		tEv.data.fd = fd;
+		
+		/* Client Socket Event ADD */
+	
+		epoll_ctl( epfd, EPOLL_CTL_ADD, fd, &tEv );
+
+	} do
+
+	if( fd < 0 || errno != EAGAIN && errno != EWOULDBLOCK )
 	{
 		printf("[SOCKET_Accept] Socket Accept Fail <%d:%s>\n", errno, strerror(errno));
 		return ERR_SOCKET_ACCEPT;
 	}
 
 	return SOCKET_OK;
+}
 
+int EventLoop ( int socket )
+{
+	/* tEv: fd 단일 등록 -> epoll_ctl()
+	   tEvs: fd에서 발생한 이벤트들 -> epoll_wait() */
+	struct epoll_event tEv, tEvents[MAX_EVENTS];
+	
+	int fd, epfd, flags = -1;
+	int i, n, rc = 0;
+
+	if ( socket < 0 )
+	{
+		printf("[EventLoop] Socket FD is Wrong\n");
+		return ERR_SOCKET_ARG;
+	}
+
+	/* create epoll instance */
+	
+	epfd = epoll_create(0);
+	if( epfd < 0 )
+	{
+		printf("[EventLoop] Epoll Create Fail\n");
+		return ERR_EPOLL_CREATE;
+	}
+
+	/* Server Socket 연결 요청 Event */
+
+	tEv.events = EPOLLIN;
+	tEv.data.fd = socket;
+	
+	rc = epoll_ctl( epfd, EPOLL_CTL_ADD, socket, &tEv );
+	if( rc < 0 )
+	{
+		printf("[EventLoop] Epoll Control Fail\n");
+		goto close_event;
+	}
+
+	rc = SET_NONBLOCKING( socket );
+	if( rc < 0 )
+	{
+		printf("[EventLoop] Set Nonblocking Fail\n");
+		goto close_event;
+	}
+
+	printf("======================= Waiting Connecting =======================\n");
+
+	while(1)
+	{
+		n = epoll_wait( epfd, tEvents, MAX_CLIENTS, -1 );
+		if( n < 0 )
+		{
+			if( errno = EINTER )
+				continue;
+			else
+			{
+				printf("EventLoop] Epoll Wait Fail\n");
+				goto close_event;
+			}
+
+			for( i = 0; i < n; i++ )
+			{
+				fd = tEvents[i].data.fd;
+				
+				switch(fd)
+				{
+					case (socket):
+						
+						/* New Clients Connection */
+						
+						rc = HDL_ACCEPT( epfd, socket );
+						if( rc < 0 )
+						{
+							printf("[EventLoop] HDL_ACCEPT fail\n");
+							goto close_event;
+						}
+
+						break;
+	
+					default:
+						
+						if( tEvents[i].events & EPOLLIN )
+						{
+							rc = HDL_SOCKET (socket );
+							if( rc < 0 )
+							{
+								printf("[EventLoop] HDL_SOCKET fail\n");
+								goto close_event;
+							}
+						}
+
+						break;
+				}
+			}
+		}
+	}
+
+	return SOCKET_OK;
+
+close_event:
+	close( fd );
+	return ERR_EVENTLOOP;
 }

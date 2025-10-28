@@ -1,6 +1,19 @@
 #ifndef _ZT_CTX_H_
 #define _ZT_CTX_H_
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/epoll.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <stddef.h>
+
 typedef enum {
     SOCKET_OK = 0,
     ERR_SOCKET_INIT,
@@ -11,19 +24,19 @@ typedef enum {
 }
 
 #define NAME_MAX_LEN 16
-#define VALUE_MAX_LEN
-#define METHOD_MAX_LEN
-#define URI_MAX_LEN
-#define VERSION_MAX_LEN
-#define REASON_MAX_LEN
-#define BODY_MAX_LEN
+#define VALUE_MAX_LEN 128
+#define METHOD_MAX_LEN 8
+#define URI_MAX_LEN 256
+#define VERSION_MAX_LEN 16
+#define REASON_MAX_LEN 64
+#define BODY_MAX_LEN 1024
 
-typedef struct {
+typedef struct _HeaderType {
     char name[NAME_MAX_LEN];
     char value[VALUE_MAX_LEN];
 } HeaderType_t;
 
-typedef struct {
+typedef struct _ReqType{
     char method[METHOD_MAX_LEN];
     char uri[URI_MAX_LEN];
     char version[VERSION_MAX_LEN];
@@ -54,6 +67,6 @@ typedef struct {
 	char contentType;
 	int nContentLen;
 	int nStatus;
-} HttpCTX_t
+} HttpCTX_t;
 
 #endif

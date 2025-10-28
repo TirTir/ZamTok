@@ -1,14 +1,4 @@
-#include <stdio.h>
-#include <sdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <unistd.h>
-#include <fnctl.h>
-#include <sys/epoll.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include "ZT_Inc.h"
 
 typedef struct {
 	char *pName;

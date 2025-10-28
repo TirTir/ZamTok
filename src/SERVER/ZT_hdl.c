@@ -1,19 +1,17 @@
-#include <stdio.h>
-#include <string.h>
-
+#include "ZT_Inc.h"
 
 /*=================================================
-* name : HDL_HEADER
-* return :
-* param : 
-===================================================*/
+ * name : HDL_HEADER
+ * return : 
+ * param : *pheader, nStatus, llen, *pType
+ ===================================================*/
 
-int HDL_HEADER( char *pheader, int nStatus, long llen, char *pType )
+void HDL_HEADER( char *pheader, int nStatus, long llen, char *pType )
 {
 	if(pHeader == NULL || nStatus < 100 || llen <= 0 || pType == NULL ) return -1;
-	
+
 	char msg[MAX_STATUS_MSG_LEN];
-	
+
 	switch (nStatus)
 	{
 		case 200:
@@ -29,21 +27,21 @@ int HDL_HEADER( char *pheader, int nStatus, long llen, char *pType )
 			snprintf(status_msg, MAX_STATUS_MSG_LEN, "Internal Server Error");
 			break;
 	}
-	
+
 	snprintf( pHeader, HEADER_FMT, nStatus, msg, llen, pType );
 }
 
 
 /*=================================================
-* name : HDL_HEADER_MIME
-* return :
-* param : 
-===================================================*/
+ * name : HDL_HEADER_MIME
+ * return :
+ * param : *pContentType, *pUri, tContentLen 
+ ===================================================*/
 
 int HDL_HEADER_MIME( char *pContentType, const char *pUri, size_t tContentLen )
 {
 	if( pContentType == NULL || pUri == NULL ) return -1;
-	
+
 	char *ext = strrchr( pUri, '.' );
 
 	if( !strcmp( ext, ".html") )
@@ -69,104 +67,117 @@ int HDL_HEADER_MIME( char *pContentType, const char *pUri, size_t tContentLen )
 	else 
 		strncpy( pContentType, "text/plain",  tContentLen );
 
-	return 0;
+	return SOCKET_OK;
 }
 
 /*=================================================
-* name : HDL_SOCKET
-* return :
-* param :
-===================================================*/
+ * name : HDL_SOCKET
+ * return :
+ * param :
+ ===================================================*/
 int HDL_SOCKET ( int epfd, int socket )
 {
 	struct ReqType_t tMsg;
-    
+
 	char buf[BUF_MAX_SIZE] = {0};
-    size_t n = 0;
-    
-    if( epfd < 0 )
-    {
-        printf("[HDL_SOCKET] Epoll FD is Wrong\n");
-        return ERR_SOCKET_ARG;
-    }
-  
+	size_t n = 0;
+	int nRetryCnt = 0;
+
+	if( epfd < 0 )
+	{
+		printf("[HDL_SOCKET] Epoll FD is Wrong\n");
+		return ERR_SOCKET_ARG;
+	}
+
 	if( socket < 0 )
 	{
-        printf("[HDL_SOCKET] Socket FD is Wrong\n");
-        return ERR_SOCKET_ARG;
-    }
+		printf("[HDL_SOCKET] Socket FD is Wrong\n");
+		return ERR_SOCKET_ARG;
+	}
 
-	/* 요청 수신 */	
-    while(( n = read( socket, buf, sizeof(buf) ) > 0))
-    {
-        if( n == 0 )
-        {
-            printf("[DICONNECT] FD=%d closed\n", socket );
-            return SOCKET_CLOSED;
-        }
-        else if( n < 0 && errno != EAGAIN )
-        {
-            printf("[HDL_SOCKET] Read Socket Fail FD=%d <%d:%s>\n", socket, errno, strerror(errno));
-            return ERR_SOCKET_READ;
-        }
+			return ERR_SOCKET_READ;
+		}	
 
-        buf[n] = '\0';
+	} while( n > 0 )
 
-    	printf("====================== HDL_SOCKET_Request ======================\n");
-        printf("%s\n", buf);
+	nRetryCnt = 0;
 
-        snprintf( parse, sizeof(parse), "%s", buf );
+	while( nRetryCnt < RETRY_MAX_CNT )
+	{
+		errno = 0;
+		n = read( socket, buf, sizeof(buf) ); 
+		
+		if( n < 0 && ( errno == EWOULDBLOCK ) || ( errno == EAGAIN ) || ( errno == EINTR ) )
+		{
+			printf("[HDL_SOCKET] Read Socket Fail FD=%d <%d:%s>\n", socket, errno, strerror(errno));
+			nRetryCnt++;
+			continue;
+		}
 
-        char *method = strtok( parse, " " );
-        char *url = strtok( NULL, " " );
-	    char *version = strtok( NULL, "\r\n" );
+		buf[n] = '\0';
 
-        if( !method || !url || !version )
-        {
-            printf("[HDL_SOCKET] Invalid Request Line\n");
-            HDL_400( socket );
-            return;
-        }
+		printf("====================== HDL_SOCKET_Request ======================\n");
+		printf("%s\n", buf);
 
-        /* Data Parsing */
-	    snprintf( req.method, sizeof(req.method), "%s", method );
-	    snprintf( req.url, sizeof(req.uri), "%s", url );
-	    snprintf( req.version, sizeof(req.version), "%s", version );
+		snprintf( parse, sizeof(parse), "%s", buf );
 
-        printf("====================== HDL_SOCKET_Request Parsing ======================\n");
-	    printf("Method: %s, URI: %s\n", req.method, req.uri);
+		char *method = strtok( parse, " " );
+		char *url = strtok( NULL, " " );
+		char *version = strtok( NULL, "\r\n" );
 
-	    /* 요청 경로 설정 */
-        snprintf( pTempUrl, sizeof(pTempUrl), "%s", url );
-        if( !strcmp( pTempUrl, "/"))
-        {
-            snprintf( pTempUrl, sizeof(pTempUrl), "%s", "/indx.html" );
-        }
+		if( !method || !url || !version )
+		{
+			printf("[HDL_SOCKET] Invalid Request Line\n");
+			HDL_400( socket );
+			return;
+		}
 
-	
-        nContentLen = st.st_size;
-        HDL_HEADER_MIME( contentType, localUrL );
-        HDL_HEADER( header, 200, nContentLen, contentType );
-        write( socket, header, strlen( header ));
+		/* Data Parsing */
+		snprintf( req.method, sizeof(req.method), "%s", method );
+		snprintf( req.url, sizeof(req.uri), "%s", url );
+		snprintf( req.version, sizeof(req.version), "%s", version );
 
-    }
+		printf("====================== HDL_SOCKET_Request Parsing ======================\n");
+		printf("Method: %s, URI: %s\n", req.method, req.uri);
 
-    while(( cnt = read( fd, buf, BUF_XIZE)) > 0)
-    {
-        write( socket, buf, cnt );
-    }
+		/* 요청 경로 설정 */
+		snprintf( pTempUrl, sizeof(pTempUrl), "%s", url );
+		if( !strcmp( pTempUrl, "/"))
+		{
+			snprintf( pTempUrl, sizeof(pTempUrl), "%s", "/indx.html" );
+		}
+
+
+		nContentLen = st.st_size;
+		HDL_HEADER_MIME( contentType, localUrL );
+		HDL_HEADER( header, 200, nContentLen, contentType );
+		write( socket, header, strlen( header ));
+
+	}
+
+	if( n == 0 )
+	{
+		printf("[DICONNECT] FD=%d closed\n", socket );
+		return SOCKET_CLOSED;
+	}
+	else if( n < 0 && nRetryCnt == RETRY_MAX_CNT )
+	{
+		printf("[HDL_SOCKET] Read Socket Fail\n", socket, errno, strerror(errno));
+		return ERR_SOCKET_READ;
+	}
+
 
 	return SOCKET_OK;
 }
 
 void HDL_400( int socket )
 {
-    const char *msg = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n";
-    write( socket, msg, strlen(msg) );
+	const char *msg = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n";
+	write( socket, msg, strlen(msg) );
 }
 
 
 void HDL_500( int socket ) {
-    const char *msg = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n";
-    write( socket, msg, strlen(msg) );
+	const char *msg = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n";
+	write( socket, msg, strlen(msg) );
 }

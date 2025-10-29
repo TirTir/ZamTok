@@ -9,40 +9,111 @@
 !_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
 !_TAG_PROGRAM_URL	https://ctags.io/	/official site/
 !_TAG_PROGRAM_VERSION	5.9.0	//
-ATOI	ZT_atoi.c	/^int ATOI( char *pStr, int *pnResult) {$/;"	f	typeref:enum:__anone708ccf00203 int
-ATOI_OK	ZT_atoi.c	/^	ATOI_OK = 0,$/;"	e	enum:__anone708ccf00203	file:
-ERR_ATOI_ARG	ZT_atoi.c	/^	ERR_ATOI_ARG,$/;"	e	enum:__anone708ccf00203	file:
-ERR_EXCESS_RANGE	ZT_atoi.c	/^	ERR_EXCESS_RANGE,$/;"	e	enum:__anone708ccf00203	file:
-ERR_INVALID_NUM	ZT_atoi.c	/^	ERR_INVALID_NUM,$/;"	e	enum:__anone708ccf00203	file:
-ERR_SOCKET_BIND	ZT_evt.c	/^	ERR_SOCKET_BIND,$/;"	e	enum:__anonb1f477920103	file:
-ERR_SOCKET_CONNECT	ZT_evt.c	/^	ERR_SOCKET_CONNECT,$/;"	e	enum:__anonb1f477920103	file:
-ERR_SOCKET_CREATE	ZT_evt.c	/^	ERR_SOCKET_CREATE,$/;"	e	enum:__anonb1f477920103	file:
-ERR_SOCKET_INIT	ZT_evt.c	/^	ERR_SOCKET_INIT,$/;"	e	enum:__anonb1f477920103	file:
-HDL_404	ZT_hdl.c	/^void HDL_404( )$/;"	f	typeref:typename:void
-HDL_HEADER	ZT_hdl.c	/^int HDL_HEADER( char *pheader, int nStatus, long llen, char *pType )$/;"	f	typeref:typename:int
+$(RELEASE_DIR)	Makefile	/^$(RELEASE_DIR):$/;"	t
+$(TARGET)	Makefile	/^$(TARGET): $(OBJS)$/;"	t
+%.o	Makefile	/^%.o: %.c$/;"	t
+ATOI	ZT_atoi.c	/^int ATOI( char *pStr, int *pnResult) {$/;"	f	typeref:typename:int
+ATOI	ZT_atoi.h	/^int ATOI( char *pStr, int *pnResult); $/;"	t	typeref:enum:__anone708ccf50103 int ()(char * pStr,int * pnResult)
+ATOI_OK	ZT_atoi.h	/^    ATOI_OK = 0,$/;"	e	enum:__anone708ccf50103
+BODY_MAX_LEN	ZT_CTX.h	/^#define BODY_MAX_LEN /;"	d
+BUF_MAX_LEN	ZT_CTX.h	/^#define BUF_MAX_LEN /;"	d
+CC	Makefile	/^CC = gcc$/;"	m
+CFLAGS	Makefile	/^CFLAGS = -g -Wall -Wextra -O2$/;"	m
+ERR_ATOI_ARG	ZT_atoi.h	/^    ERR_ATOI_ARG,$/;"	e	enum:__anone708ccf50103
+ERR_EPOLL_CREATE	ZT_CTX.h	/^	ERR_EPOLL_CREATE = -11,$/;"	e	enum:__anonaf7a1a770103
+ERR_EVENTLOOP	ZT_CTX.h	/^	ERR_EVENTLOOP = -14,$/;"	e	enum:__anonaf7a1a770103
+ERR_EXCESS_RANGE	ZT_atoi.h	/^    ERR_EXCESS_RANGE,$/;"	e	enum:__anone708ccf50103
+ERR_INVALID_NUM	ZT_atoi.h	/^    ERR_INVALID_NUM,$/;"	e	enum:__anone708ccf50103
+ERR_NONBLOCKING	ZT_CTX.h	/^	ERR_NONBLOCKING = -13,$/;"	e	enum:__anonaf7a1a770103
+ERR_NONBLOCKING_ARGS	ZT_CTX.h	/^	ERR_NONBLOCKING_ARGS = -12,$/;"	e	enum:__anonaf7a1a770103
+ERR_SOCKET_ACCEPT	ZT_CTX.h	/^    ERR_SOCKET_ACCEPT = -7,$/;"	e	enum:__anonaf7a1a770103
+ERR_SOCKET_ARG	ZT_CTX.h	/^    ERR_SOCKET_ARG = -2,$/;"	e	enum:__anonaf7a1a770103
+ERR_SOCKET_BIND	ZT_CTX.h	/^    ERR_SOCKET_BIND = -4,$/;"	e	enum:__anonaf7a1a770103
+ERR_SOCKET_CONNECT	ZT_CTX.h	/^    ERR_SOCKET_CONNECT = -6,$/;"	e	enum:__anonaf7a1a770103
+ERR_SOCKET_CREATE	ZT_CTX.h	/^    ERR_SOCKET_CREATE = -5,$/;"	e	enum:__anonaf7a1a770103
+ERR_SOCKET_INIT	ZT_CTX.h	/^	ERR_SOCKET_INIT = -3,$/;"	e	enum:__anonaf7a1a770103
+ERR_SOCKET_LISTEN	ZT_CTX.h	/^	ERR_SOCKET_LISTEN = -8,$/;"	e	enum:__anonaf7a1a770103
+ERR_SOCKET_READ	ZT_CTX.h	/^	ERR_SOCKET_READ = -9,$/;"	e	enum:__anonaf7a1a770103
+ERR_SOCKET_WRITE	ZT_CTX.h	/^	ERR_SOCKET_WRITE = -10,$/;"	e	enum:__anonaf7a1a770103
+EventLoop	ZT_evt.c	/^int EventLoop ( int socket )$/;"	f	typeref:typename:int
+FILE_MAX_LEN	ZT_CTX.h	/^#define FILE_MAX_LEN /;"	d
+HDL_400	ZT_hdl.c	/^void HDL_400( int socket )$/;"	f	typeref:typename:void
+HDL_500	ZT_hdl.c	/^void HDL_500( int socket ) {$/;"	f	typeref:typename:void
+HDL_HEADER	ZT_hdl.c	/^void HDL_HEADER( char *pheader, int nStatus, long llen, char *pType )$/;"	f	typeref:typename:void
+HDL_HEADER	ZT_http.c	/^int HDL_HEADER( char *pheader, int nStatus, long llen, char *pType )$/;"	f	typeref:typename:int
 HDL_HEADER_MIME	ZT_hdl.c	/^int HDL_HEADER_MIME( char *pContentType, const char *pUri, size_t tContentLen )$/;"	f	typeref:typename:int
-HDL_SOCKET	ZT_evt.c	/^int HDL_SOCKET ( int socket )$/;"	f	typeref:typename:int
+HDL_SOCKET	ZT_hdl.c	/^int HDL_SOCKET ( int epfd, int socket )$/;"	f	typeref:typename:int
+HTTP_CheckMIMEType	ZT_http.c	/^int HTTP_CheckMIMEType( char *pContentType, const char *pUri, size_t tContentLen )$/;"	f	typeref:typename:int
+HeaderType_t	ZT_CTX.h	/^} HeaderType_t;$/;"	t	typeref:struct:_HeaderType
+HttpCTX_t	ZT_CTX.h	/^} HttpCTX_t;$/;"	t	typeref:struct:__anonaf7a1a770308
 IS_NULL	ZT_queue.c	/^#define IS_NULL(/;"	d	file:
 LOG_ERR	ZT_log.h	/^#define LOG_ERR(/;"	d
 LOG_ERR	ZT_queue.c	/^#define LOG_ERR(/;"	d	file:
+MAX_CLIENTS	ZT_Inc.h	/^#define MAX_CLIENTS /;"	d
+MAX_EVENTS	ZT_Inc.h	/^#define MAX_EVENTS /;"	d
+METHOD_MAX_LEN	ZT_CTX.h	/^#define METHOD_MAX_LEN /;"	d
 MUTEX_UNLOCK	ZT_queue.c	/^#define MUTEX_UNLOCK(/;"	d	file:
+NAME_MAX_LEN	ZT_CTX.h	/^#define NAME_MAX_LEN /;"	d
+OBJS	Makefile	/^OBJS = $(SRCS:.c=.o)$/;"	m
+REASON_MAX_LEN	ZT_CTX.h	/^#define REASON_MAX_LEN /;"	d
+RELEASE_DIR	Makefile	/^RELEASE_DIR = ..\/release$/;"	m
+RM	Makefile	/^RM = rm -f$/;"	m
+ReqType_t	ZT_CTX.h	/^} ReqType_t;$/;"	t	typeref:struct:_ReqType
+ResType_t	ZT_CTX.h	/^} ResType_t;$/;"	t	typeref:struct:__anonaf7a1a770208
 SEM_POST	ZT_queue.c	/^#define SEM_POST(/;"	d	file:
-SOCKET_Init	ZT_evt.c	/^int SOCKET_Init ( )$/;"	f	typeref:typename:int
-SOCKET_OK	ZT_evt.c	/^	SOCKET_OK = 0,$/;"	e	enum:__anonb1f477920103	file:
+SET_NONBLOCKING	ZT_evt.c	/^int SET_NONBLOCKING (int socket )$/;"	f	typeref:typename:int
+SOCKET_Accept	ZT_evt.c	/^int SOCKET_Accept ( int socket, int epfd )$/;"	f	typeref:typename:int
+SOCKET_Bind	ZT_evt.c	/^int SOCKET_Bind ( int socket, int port )$/;"	f	typeref:typename:int
+SOCKET_Init	ZT_evt.c	/^int SOCKET_Init ( int *pSocket )$/;"	f	typeref:typename:int
+SOCKET_OK	ZT_CTX.h	/^    SOCKET_OK = -1,$/;"	e	enum:__anonaf7a1a770103
+SRCS	Makefile	/^SRCS = ZT_main.c \\$/;"	m
+TARGET	Makefile	/^TARGET = $(RELEASE_DIR)\/main$/;"	m
+URI_MAX_LEN	ZT_CTX.h	/^#define URI_MAX_LEN /;"	d
+VALUE_MAX_LEN	ZT_CTX.h	/^#define VALUE_MAX_LEN /;"	d
+VERSION_MAX_LEN	ZT_CTX.h	/^#define VERSION_MAX_LEN /;"	d
+_HeaderType	ZT_CTX.h	/^typedef struct _HeaderType {$/;"	s
+_ReqType	ZT_CTX.h	/^typedef struct _ReqType{$/;"	s
+_ZT_ATOI_H_	ZT_atoi.h	/^#define _ZT_ATOI_H_$/;"	d
+_ZT_CTX_H_	ZT_CTX.h	/^#define _ZT_CTX_H_$/;"	d
+_ZT_EVT_H_	ZT_evt.h	/^#define _ZT_EVT_H_$/;"	d
+_ZT_HDL_H_	ZT_hdl.h	/^#define _ZT_HDL_H_$/;"	d
 _ZT_INC_H_	ZT_Inc.h	/^#define _ZT_INC_H_$/;"	d
 _ZT_LOG_H_	ZT_log.h	/^#define _ZT_LOG_H_$/;"	d
 _ZT_QUEUE_H_	ZT_queue.h	/^#define _ZT_QUEUE_H_$/;"	d
-__anonb1f477920103	ZT_evt.c	/^typedef enum {$/;"	g	file:
-__anone708ccf00203	ZT_atoi.c	/^typedef enum {$/;"	g	file:
-cmd	ZT_evt.c	/^	int cmd;$/;"	v	typeref:typename:int
+__anonaf7a1a770103	ZT_CTX.h	/^typedef enum {$/;"	g
+__anonaf7a1a770208	ZT_CTX.h	/^typedef struct {$/;"	s
+__anonaf7a1a770308	ZT_CTX.h	/^typedef struct {$/;"	s
+__anone708ccf50103	ZT_atoi.h	/^typedef enum {$/;"	g
+all	Makefile	/^all: $(RELEASE_DIR) $(TARGET)$/;"	t
+body	ZT_CTX.h	/^    char body[BODY_MAX_LEN];$/;"	m	struct:_ReqType	typeref:typename:char[]
+body	ZT_CTX.h	/^    char body[BODY_MAX_LEN];$/;"	m	struct:__anonaf7a1a770208	typeref:typename:char[]
+clean	Makefile	/^clean:$/;"	t
+client_addr	ZT_CTX.h	/^	struct sockaddr_in client_addr;$/;"	m	struct:__anonaf7a1a770308	typeref:struct:sockaddr_in
+contentType	ZT_CTX.h	/^	char contentType;$/;"	m	struct:__anonaf7a1a770308	typeref:typename:char
 dequeue	ZT_queue.c	/^int dequeue(Queue *queue, address_info_t *data) { \/\/ consumer$/;"	f	typeref:typename:int
 destroy_queue	ZT_queue.c	/^int destroy_queue(Queue *queue) {$/;"	f	typeref:typename:int
 enqueue	ZT_queue.c	/^int enqueue(Queue *queue, address_info_t *data) { \/\/ producer$/;"	f	typeref:typename:int
+filePath	ZT_CTX.h	/^	char filePath[FILE_MAX_LEN];$/;"	m	struct:__anonaf7a1a770308	typeref:typename:char[]
+g_nClients	ZT_main.c	/^int g_nClients;$/;"	v	typeref:typename:int
 init_queue	ZT_queue.c	/^int init_queue(Queue *queue) {$/;"	f	typeref:typename:int
 is_empty	ZT_queue.c	/^int is_empty(Queue *queue, bool *flag) {$/;"	f	typeref:typename:int
 is_full	ZT_queue.c	/^int is_full(Queue *queue, bool *flag) {$/;"	f	typeref:typename:int
 main	ZT_main.c	/^int main( int argc, char **argv )$/;"	f	typeref:typename:int
-pDoc	ZT_evt.c	/^	char *pDoc;$/;"	v	typeref:typename:char *
-pName	ZT_evt.c	/^	char *pName;$/;"	v	typeref:typename:char *
-rc	ZT_evt.c	/^	int rc = 0;$/;"	v	typeref:typename:int
-sin	ZT_evt.c	/^	struct sockaddr_in sin;$/;"	v	typeref:struct:sockaddr_in
+method	ZT_CTX.h	/^    char method[METHOD_MAX_LEN];$/;"	m	struct:_ReqType	typeref:typename:char[]
+nClientFD	ZT_CTX.h	/^	int nClientFD;$/;"	m	struct:__anonaf7a1a770308	typeref:typename:int
+nContentLen	ZT_CTX.h	/^	int nContentLen;$/;"	m	struct:__anonaf7a1a770308	typeref:typename:int
+nHeaderCnt	ZT_CTX.h	/^    int nHeaderCnt;$/;"	m	struct:_ReqType	typeref:typename:int
+nHeaderCnt	ZT_CTX.h	/^    int nHeaderCnt;$/;"	m	struct:__anonaf7a1a770208	typeref:typename:int
+nStatus	ZT_CTX.h	/^	int nStatus;$/;"	m	struct:__anonaf7a1a770308	typeref:typename:int
+name	ZT_CTX.h	/^    char name[NAME_MAX_LEN];$/;"	m	struct:_HeaderType	typeref:typename:char[]
+reason	ZT_CTX.h	/^    char reason[REASON_MAX_LEN];$/;"	m	struct:__anonaf7a1a770208	typeref:typename:char[]
+recvBuf	ZT_CTX.h	/^	char recvBuf[BUF_MAX_LEN];$/;"	m	struct:__anonaf7a1a770308	typeref:typename:char[]
+sendBuf	ZT_CTX.h	/^	char sendBuf[BUF_MAX_LEN];$/;"	m	struct:__anonaf7a1a770308	typeref:typename:char[]
+tHeaderType	ZT_CTX.h	/^    HeaderType_t tHeaderType;$/;"	m	struct:_ReqType	typeref:typename:HeaderType_t
+tHeaderType	ZT_CTX.h	/^    HeaderType_t tHeaderType;$/;"	m	struct:__anonaf7a1a770208	typeref:typename:HeaderType_t
+tReqType	ZT_CTX.h	/^	ReqType_t tReqType;$/;"	m	struct:__anonaf7a1a770308	typeref:typename:ReqType_t
+unStatusCode	ZT_CTX.h	/^    unsigned int unStatusCode;$/;"	m	struct:__anonaf7a1a770208	typeref:typename:unsigned int
+uri	ZT_CTX.h	/^    char uri[URI_MAX_LEN];$/;"	m	struct:_ReqType	typeref:typename:char[]
+value	ZT_CTX.h	/^    char value[VALUE_MAX_LEN];$/;"	m	struct:_HeaderType	typeref:typename:char[]
+version	ZT_CTX.h	/^    char version[VERSION_MAX_LEN];$/;"	m	struct:_ReqType	typeref:typename:char[]
+version	ZT_CTX.h	/^    char version[VERSION_MAX_LEN];$/;"	m	struct:__anonaf7a1a770208	typeref:typename:char[]

@@ -15,14 +15,20 @@ int main( int argc, char **argv )
 		return -1;
 	}
 
-	port = ATOI(argv[1]);
+	rc = ATOI(argv[1], &port);
+	if( rc < 0 )
+	{
+		printf("[ERROR] ATOI() Fail\n");
+		return -1;
+	}
+
 	printf( "[INFO] The Server Will Listen to Port: %d\n", port );
 	
 	rc = SOCKET_Init( &socket );
 	if( rc < 0 )
 	{
 		printf("[ERROR] Socket_Init Fail\n");
-		close_socket;
+		goto close_socket;
 	}
 
 	rc = SOCKET_Bind( socket, port );

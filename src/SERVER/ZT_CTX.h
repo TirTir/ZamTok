@@ -1,27 +1,22 @@
 #ifndef _ZT_CTX_H_
 #define _ZT_CTX_H_
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/epoll.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <stddef.h>
-
 typedef enum {
-    SOCKET_OK = 0,
-    ERR_SOCKET_INIT,
-    ERR_SOCKET_BIND,
-    ERR_SOCKET_CREATE,
-    ERR_SOCKET_CONNECT,
-    ERR_SOCKET_ACCEPT,
-}
+    SOCKET_OK = -1,
+    ERR_SOCKET_ARG = -2,
+	ERR_SOCKET_INIT = -3,
+    ERR_SOCKET_BIND = -4,
+    ERR_SOCKET_CREATE = -5,
+    ERR_SOCKET_CONNECT = -6,
+    ERR_SOCKET_ACCEPT = -7,
+	ERR_SOCKET_LISTEN = -8,
+	ERR_SOCKET_READ = -9,
+	ERR_SOCKET_WRITE = -10,
+	ERR_EPOLL_CREATE = -11,
+	ERR_NONBLOCKING_ARGS = -12,
+	ERR_NONBLOCKING = -13,
+	ERR_EVENTLOOP = -14,
+};
 
 #define NAME_MAX_LEN 16
 #define VALUE_MAX_LEN 128
@@ -40,9 +35,14 @@ typedef struct _ReqType{
     char method[METHOD_MAX_LEN];
     char uri[URI_MAX_LEN];
     char version[VERSION_MAX_LEN];
-    HeaderType_t tHeaderType;
-    int nHeaderCnt;
-    char body[BODY_MAX_LEN];
+    
+	HeaderType_t tGeneralHeader[HEADER_MAX_COUNT];
+    int nGeneralCnt;
+
+    HeaderType_t tContentHeader[HEADER_MAX_COUNT]; // Content 헤더 (Content-Type, Content-Length)
+    int nContentCnt;
+
+	char body[BODY_MAX_LEN];
 } ReqType_t;
 
 typedef struct {
@@ -68,5 +68,9 @@ typedef struct {
 	int nContentLen;
 	int nStatus;
 } HttpCTX_t;
+
+#define RETRY_MAX_CNT 3
+#define MAX_STATUS_MSG_LEN 64
+#define HEADER_FMT "%s %d %s\r\nContent-Length: %ld\r\nContent-Type: %s\r\n\r\n"
 
 #endif

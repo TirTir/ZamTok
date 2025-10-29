@@ -1,5 +1,6 @@
 #include "ZT_Inc.h"
 
+/*
 typedef struct {
 	char *pName;
 	int cmd;
@@ -10,12 +11,14 @@ stCommand_t gpCommands [] = {
 	{ "help", 1, "							:This Screen" },
 	{ (char*)NULL, 0, NULL }	
 }
+*/
 
-extern g_nClients;
+extern g_nClients[MAX_CLIENTS];
 
 int SET_NONBLOCKING (int socket )
 {
 	int flags = -1;
+	int rc = 0;
 
 	if( socket < 0 )
 	{
@@ -24,7 +27,7 @@ int SET_NONBLOCKING (int socket )
 	}
 
 	/* Get Original FD Status */
-	flags = fnctl( socket, F_GETFL, 0 );
+	flags = fcntl( socket, F_GETFL, 0 );
 	if( flags < 0 )
 	{
 		printf("[SET_NONBLOCKING] Fnctl Get Fail\n");
@@ -37,6 +40,8 @@ int SET_NONBLOCKING (int socket )
 		printf("[SET_NONBLOCKING] Fnctl Nonblock Set Fail\n");
 		return ERR_NONBLOCKING;
 	}
+
+	return SOCKET_OK;
 }
 
 int SOCKET_Bind ( int socket, int port )
@@ -55,7 +60,7 @@ int SOCKET_Bind ( int socket, int port )
  		return ERR_SOCKET_BIND;
 	}
 	
-	rc = listen( socket, MAX_CLIENT );
+	rc = listen( socket, MAX_CLIENTS );
 	if( rc < 0 )
 	{
 		printf("[SOCKET_Bind] Socket listen Fail <%d:%s>\n", errno, strerror(errno));
@@ -66,13 +71,13 @@ int SOCKET_Bind ( int socket, int port )
 
 }
 
-int SOCKET_Init ( int *socket )
+int SOCKET_Init ( int *pSocket )
 {
 	int i, rc = 0;
 	int fd = -1;
 	int opt = 1, flag = 0;
 	
-	if( socket == NULL )
+	if( pSocket == NULL )
 	{
 		printf("[SOCKET_Init] Socket is NULL\n");
 	}
@@ -93,10 +98,12 @@ int SOCKET_Init ( int *socket )
 		return ERR_SOCKET_INIT;
 	}
 	
-	for(i = 0; i < MAX_CLIENTS; i++)
+	/*
+	   for(i = 0; i < MAX_CLIENTS; i++)
 	{
 		g_nClients[i] = -1;
 	}
+	*/
 
 	return SOCKET_OK;
 
@@ -106,8 +113,10 @@ int SOCKET_Accept ( int socket, int epfd )
 {
 	struct sockaddr_in tClientAddr;
 	socklen_t addrlen = sizeof(tClientAddr);
+	
+	struct epoll_event tEv;
 
-	int nClientFD = -1, 
+	int nClientFD = -1; 
     int rc = 0;
 
 	if ( socket < 0 )
@@ -197,7 +206,7 @@ int EventLoop ( int socket )
 		n = epoll_wait( epfd, tEvents, MAX_CLIENTS, -1 );
 		if( n < 0 )
 		{
-			if( errno == EINTER )
+			if( errno == EINTR )
 				continue;
 			else
 			{
@@ -210,34 +219,28 @@ int EventLoop ( int socket )
 		{
 			fd = tEvents[i].data.fd;
 			
-			switch(fd)
+			if( fd == socket )
 			{
-				case (socket):
-					
-					/* New Clients Connection */
+				/* New Clients Connection */
 						
-					rc = HDL_ACCEPT( epfd, socket );
+				rc = HDL_ACCEPT( epfd, socket );
+				if( rc < 0 )
+				{
+					printf("[EventLoop] HDL_ACCEPT fail\n");
+					goto close_event;
+				}
+			}
+			else
+			{		
+				if( tEvents[i].events & EPOLLIN )
+				{
+					rc = HDL_SOCKET ( epfd, socket );
 					if( rc < 0 )
 					{
-						printf("[EventLoop] HDL_ACCEPT fail\n");
+						printf("[EventLoop] HDL_SOCKET fail\n");
 						goto close_event;
 					}
-
-					break;
-	
-				default:
-						
-					if( tEvents[i].events & EPOLLIN )
-					{
-						rc = HDL_SOCKET ( epfd, socket );
-						if( rc < 0 )
-						{
-							printf("[EventLoop] HDL_SOCKET fail\n");
-							goto close_event;
-						}
-					}
-
-					break;
+				}
 			}
 		}
 	}

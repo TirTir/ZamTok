@@ -6,9 +6,9 @@
  * param : *pheader, nStatus, llen, *pType
  ===================================================*/
 
-void HDL_HEADER( char *pheader, int nStatus, long llen, char *pType )
+void HDL_HEADER( char *pHeader, int nStatus, long llen, char *pType )
 {
-	if(pHeader == NULL || nStatus < 100 || llen <= 0 || pType == NULL ) return -1;
+	if(pHeader == NULL || nStatus < 100 || llen <= 0 || pType == NULL ) return;
 
 	char msg[MAX_STATUS_MSG_LEN];
 
@@ -24,7 +24,7 @@ void HDL_HEADER( char *pheader, int nStatus, long llen, char *pType )
 
 		case 500:
 		default:
-			snprintf(status_msg, MAX_STATUS_MSG_LEN, "Internal Server Error");
+			snprintf(msg, MAX_STATUS_MSG_LEN, "Internal Server Error");
 			break;
 	}
 
@@ -40,13 +40,23 @@ void HDL_HEADER( char *pheader, int nStatus, long llen, char *pType )
 
 int HDL_HEADER_MIME( char *pContentType, const char *pUri, size_t tContentLen )
 {
-	if( pContentType == NULL || pUri == NULL ) return -1;
+	if( pContentType == NULL )
+	{
+		printf("[HDL_HEADER_MIME] Content Type is NULL\n");
+		return HDL_HEADER_MIME_ARGS;
+	}
+	
+	if ( pUri == NULL )
+	{
+		printf("[HDL_HEADER_MIME] URI is NULL\n");
+		return HDL_HEADER_MIME_ARGS;
+	}
 
 	char *ext = strrchr( pUri, '.' );
 
 	if( !strcmp( ext, ".html") )
 	{
-		strncpy( pContentType, "text/html", tContentLen );
+		snprintf( pContentType, CONTENT"text/html", tContentLen );
 	}
 	else if( !strcmp( ext, ".jpg") || !strcmp( ext, ".jpeg" ))
 	{
@@ -77,9 +87,9 @@ int HDL_HEADER_MIME( char *pContentType, const char *pUri, size_t tContentLen )
  ===================================================*/
 int HDL_SOCKET ( int epfd, int socket )
 {
-	struct ReqType_t tMsg;
+	ReqType_t tMsg;
 
-	char buf[BUF_MAX_SIZE] = {0};
+	char buf[BUF_MAX_LEN] = {0};
 	size_t n = 0;
 	int nRetryCnt = 0;
 
@@ -95,13 +105,7 @@ int HDL_SOCKET ( int epfd, int socket )
 		return ERR_SOCKET_ARG;
 	}
 
-			return ERR_SOCKET_READ;
-		}	
-
-	} while( n > 0 )
-
 	nRetryCnt = 0;
-
 	while( nRetryCnt < RETRY_MAX_CNT )
 	{
 		errno = 0;
@@ -133,24 +137,25 @@ int HDL_SOCKET ( int epfd, int socket )
 		}
 
 		/* Data Parsing */
-		snprintf( req.method, sizeof(req.method), "%s", method );
-		snprintf( req.url, sizeof(req.uri), "%s", url );
-		snprintf( req.version, sizeof(req.version), "%s", version );
+		snprintf( tMsg.method, sizeof(tMsg.method), "%s", method );
+		snprintf( tMsg.uri, sizeof(tMsg.uri), "%s", url );
+		snprintf( tMsg.version, sizeof(tMsg.version), "%s", version );
 
-		printf("====================== HDL_SOCKET_Request Parsing ======================\n");
-		printf("Method: %s, URI: %s\n", req.method, req.uri);
 
 		/* 요청 경로 설정 */
-		snprintf( pTempUrl, sizeof(pTempUrl), "%s", url );
-		if( !strcmp( pTempUrl, "/"))
+		if( !strcmp( tMsg.uri, "/"))
 		{
-			snprintf( pTempUrl, sizeof(pTempUrl), "%s", "/indx.html" );
+			snprintf( tMsg.uri, sizeof(tMsg.uri), "%s", "/indx.html" );
 		}
 
 
-		nContentLen = st.st_size;
-		HDL_HEADER_MIME( contentType, localUrL );
+		HDL_HEADER_MIME( &tMsg.tContentHeader, localUrl );
 		HDL_HEADER( header, 200, nContentLen, contentType );
+
+
+		printf("====================== HDL_SOCKET_Request Parsing ======================\n");
+		printf("Method: %s, URI: %s\n", tMsg.method, tMsg.uri);
+		
 		write( socket, header, strlen( header ));
 
 	}
@@ -158,7 +163,7 @@ int HDL_SOCKET ( int epfd, int socket )
 	if( n == 0 )
 	{
 		printf("[DICONNECT] FD=%d closed\n", socket );
-		return SOCKET_CLOSED;
+		return SOCKET_OK;
 	}
 	else if( n < 0 && nRetryCnt == RETRY_MAX_CNT )
 	{

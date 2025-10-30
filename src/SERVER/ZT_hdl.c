@@ -8,9 +8,22 @@
 
 void HDL_HEADER( char *pHeader, int nStatus, long llen, char *pType )
 {
-	if(pHeader == NULL || nStatus < 100 || llen <= 0 || pType == NULL ) return;
+	if( pHeader == NULL )
+    {
+        printf("[HDL_HEADER] Header is NULL\n");
+        return ERR_SOCKET_ARG;
+    }        
+    
+    if( pType == NULL )
+    {
+        printf("[HDL_HEADER] Type is NULL\n");
+        return ERR_SOCKET_ARG;
+    }
 
-	char msg[MAX_STATUS_MSG_LEN];
+    if( nStatus < 100 || llen <= 0 )
+        return ERR_SOCKET_ARG;
+
+	char statusMsg[MAX_STATUS_MSG_LEN];
 
 	switch (nStatus)
 	{
@@ -35,10 +48,10 @@ void HDL_HEADER( char *pHeader, int nStatus, long llen, char *pType )
 /*=================================================
  * name : HDL_HEADER_MIME
  * return :
- * param : *pContentType, sizeof(pContentType), "%s", *pUri, sizeof(pContentType) 
+ * param : *pContentType, nSize, "%s", *pUri, sizeof(pContentType) 
  ===================================================*/
 
-int HDL_HEADER_MIME( char *pContentType, sizeof(pContentType), "%s", const char *pUri )
+int HDL_HEADER_MIME( char *pContentType, size_t nSize, const char *pUri )
 {
 	if( pContentType == NULL )
 	{
@@ -46,7 +59,7 @@ int HDL_HEADER_MIME( char *pContentType, sizeof(pContentType), "%s", const char 
 		return ERR_SOCKET_ARG;
 	}
 	
-	if ( pUri == NULL )
+	if( pUri == NULL )
 	{
 		printf("[HDL_HEADER_MIME] URI is NULL\n");
 		return ERR_SOCKET_ARG;
@@ -56,26 +69,26 @@ int HDL_HEADER_MIME( char *pContentType, sizeof(pContentType), "%s", const char 
 
 	if( !strcmp( ext, ".html") )
 	{
-		snprintf( pContentType, sizeof(pContentType), "%s", "text/html" );
+		snprintf( pContentType, nSize, "%s", "text/html" );
 	}
 	else if( !strcmp( ext, ".jpg") || !strcmp( ext, ".jpeg" ))
 	{
-		strncpy( pContentType, sizeof(pContentType), "%s", "image/jpeg" );
+		snprintf( pContentType, nSize, "%s", "image/jpeg" );
 	}
 	else if( !strcmp( ext, ".png") )
 	{
-		strncpy( pContentType, sizeof(pContentType), "%s", "image/png" );
+		snprintf( pContentType, nSize, "%s", "image/png" );
 	}
 	else if( !strcmp( ext, ".CSS") )
 	{
-		strncpy( pContentType, sizeof(pContentType), "%s", "text/CSS" );
+		snprintf( pContentType, nSize, "%s", "text/CSS" );
 	}
 	else if( !strcmp( ext, ".js") )
 	{
-		strncpy( pContentType, sizeof(pContentType), "%s", "text/javascript" );
+		snprintf( pContentType, nSize, "%s", "text/javascript" );
 	}
 	else 
-		strncpy( pContentType, sizeof(pContentType), "%s", "text/plain" );
+		snprintf( pContentType, nSize, "%s", "text/plain" );
 
 	return SOCKET_OK;
 }
@@ -87,11 +100,13 @@ int HDL_HEADER_MIME( char *pContentType, sizeof(pContentType), "%s", const char 
  ===================================================*/
 int HDL_SOCKET ( int epfd, int socket )
 {
-	ReqType_t tMsg;
-
-	char parse[BUF_MAX_LEN] = {0};
+	ReqType_t tMsg = {0};
+    //memset( &tMsg, 0x00, sizeof(tMsg) );
+	
+    char parse[BUF_MAX_LEN] = {0};
 	char buf[BUF_MAX_LEN] = {0};
-	size_t n = 0;
+	
+    size_t n = 0;
 	int nRetryCnt = 0;
 
 	if( epfd < 0 )
@@ -145,13 +160,18 @@ int HDL_SOCKET ( int epfd, int socket )
 
 		/* 요청 경로 설정 */
 		if( !strcmp( tMsg.uri, "/"))
-		{
 			snprintf( tMsg.uri, sizeof(tMsg.uri), "%s", "/indx.html" );
-		}
 
-
-		// HDL_HEADER_MIME( &tMsg.tContentHeader, localUrl );
-		// HDL_HEADER( header, 200, nContentLen, contentType );
+		rc = HDL_HEADER_MIME( &tMsg.tContentHeader[tReq.nContentCnt].value, VALUE_MAX_LEN, tMsg.Uri );
+		if( rc == SOCKET_OK )
+        {
+            snprintf( tMsg.tContentHeader[tReq.nContentCnt].name, NAME_MAX_LEN, "%s", "Content-Type");
+            nStatus = 200;
+        }
+        else
+            nStatus = 400;
+     
+        HDL_HEADER( header, 200, nContentLen, tMsg.tContentHeader[tReq.nContentCnt].value );
 
 
 		printf("====================== HDL_SOCKET_Request Parsing ======================\n");
@@ -166,14 +186,8 @@ int HDL_SOCKET ( int epfd, int socket )
 		printf("[DICONNECT] FD=%d closed\n", socket );
 		return SOCKET_OK;
 	}
-	else if( n < 0 && nRetryCnt == RETRY_MAX_CNT )
-	{
-		printf("[HDL_SOCKET] Read Socket Fail\n", socket, errno, strerror(errno));
-		return ERR_SOCKET_READ;
-	}
-
-
-	return SOCKET_OK;
+	
+    return SOCKET_OK;
 }
 
 void HDL_400( int socket )

@@ -1,23 +1,6 @@
 #ifndef _ZT_CTX_H_
 #define _ZT_CTX_H_
 
-typedef enum {
-    SOCKET_OK = -1,
-    ERR_SOCKET_ARG = -2,
-	ERR_SOCKET_INIT = -3,
-    ERR_SOCKET_BIND = -4,
-    ERR_SOCKET_CREATE = -5,
-    ERR_SOCKET_CONNECT = -6,
-    ERR_SOCKET_ACCEPT = -7,
-	ERR_SOCKET_LISTEN = -8,
-	ERR_SOCKET_READ = -9,
-	ERR_SOCKET_WRITE = -10,
-	ERR_EPOLL_CREATE = -11,
-	ERR_NONBLOCKING_ARGS = -12,
-	ERR_NONBLOCKING = -13,
-	ERR_EVENTLOOP = -14,
-};
-
 #define NAME_MAX_LEN 16
 #define VALUE_MAX_LEN 128
 #define METHOD_MAX_LEN 8
@@ -61,13 +44,17 @@ typedef struct {
 typedef struct {
 	int nClientFD;
 	struct sockaddr_in client_addr;
+
 	ReqType_t tReqType;
-	char recvBuf[BUF_MAX_LEN];
+	ResType_t tReqType;
+
+    char recvBuf[BUF_MAX_LEN];
 	char sendBuf[BUF_MAX_LEN];
 	char filePath[FILE_MAX_LEN];
 	char contentType;
 	int nContentLen;
-	int nStatus;
+
+    int nConnState;
 } HttpCTX_t;
 
 #define RETRY_MAX_CNT 3

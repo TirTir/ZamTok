@@ -25,6 +25,7 @@ typedef enum {
 #define VERSION_MAX_LEN 16
 #define REASON_MAX_LEN 64
 #define BODY_MAX_LEN 1024
+#define HEADER_MAX_COUNT 16
 
 typedef struct _HeaderType {
     char name[NAME_MAX_LEN];

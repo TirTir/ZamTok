@@ -28,54 +28,54 @@ void HDL_HEADER( char *pHeader, int nStatus, long llen, char *pType )
 			break;
 	}
 
-	snprintf( pHeader, HEADER_FMT, nStatus, msg, llen, pType );
+	// snprintf( pHeader, HEADER_FMT, nStatus, msg, llen, pType );
 }
 
 
 /*=================================================
  * name : HDL_HEADER_MIME
  * return :
- * param : *pContentType, *pUri, tContentLen 
+ * param : *pContentType, sizeof(pContentType), "%s", *pUri, sizeof(pContentType) 
  ===================================================*/
 
-int HDL_HEADER_MIME( char *pContentType, const char *pUri, size_t tContentLen )
+int HDL_HEADER_MIME( char *pContentType, sizeof(pContentType), "%s", const char *pUri )
 {
 	if( pContentType == NULL )
 	{
 		printf("[HDL_HEADER_MIME] Content Type is NULL\n");
-		return HDL_HEADER_MIME_ARGS;
+		return ERR_SOCKET_ARG;
 	}
 	
 	if ( pUri == NULL )
 	{
 		printf("[HDL_HEADER_MIME] URI is NULL\n");
-		return HDL_HEADER_MIME_ARGS;
+		return ERR_SOCKET_ARG;
 	}
 
 	char *ext = strrchr( pUri, '.' );
 
 	if( !strcmp( ext, ".html") )
 	{
-		snprintf( pContentType, CONTENT"text/html", tContentLen );
+		snprintf( pContentType, sizeof(pContentType), "%s", "text/html" );
 	}
 	else if( !strcmp( ext, ".jpg") || !strcmp( ext, ".jpeg" ))
 	{
-		strncpy( pContentType, "image/jpeg",  tContentLen );
+		strncpy( pContentType, sizeof(pContentType), "%s", "image/jpeg" );
 	}
 	else if( !strcmp( ext, ".png") )
 	{
-		strncpy( pContentType, "image/png",  tContentLen );
+		strncpy( pContentType, sizeof(pContentType), "%s", "image/png" );
 	}
 	else if( !strcmp( ext, ".CSS") )
 	{
-		strncpy( pContentType, "text/CSS",  tContentLen );
+		strncpy( pContentType, sizeof(pContentType), "%s", "text/CSS" );
 	}
 	else if( !strcmp( ext, ".js") )
 	{
-		strncpy( pContentType, "text/javascript",  tContentLen );
+		strncpy( pContentType, sizeof(pContentType), "%s", "text/javascript" );
 	}
 	else 
-		strncpy( pContentType, "text/plain",  tContentLen );
+		strncpy( pContentType, sizeof(pContentType), "%s", "text/plain" );
 
 	return SOCKET_OK;
 }
@@ -89,6 +89,7 @@ int HDL_SOCKET ( int epfd, int socket )
 {
 	ReqType_t tMsg;
 
+	char parse[BUF_MAX_LEN] = {0};
 	char buf[BUF_MAX_LEN] = {0};
 	size_t n = 0;
 	int nRetryCnt = 0;
@@ -111,7 +112,7 @@ int HDL_SOCKET ( int epfd, int socket )
 		errno = 0;
 		n = read( socket, buf, sizeof(buf) ); 
 		
-		if( n < 0 && ( errno == EWOULDBLOCK ) || ( errno == EAGAIN ) || ( errno == EINTR ) )
+		if( n < 0 && ( errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR ) )
 		{
 			printf("[HDL_SOCKET] Read Socket Fail FD=%d <%d:%s>\n", socket, errno, strerror(errno));
 			nRetryCnt++;
@@ -133,7 +134,7 @@ int HDL_SOCKET ( int epfd, int socket )
 		{
 			printf("[HDL_SOCKET] Invalid Request Line\n");
 			HDL_400( socket );
-			return;
+			return ERR_SOCKET_ARG;
 		}
 
 		/* Data Parsing */
@@ -149,14 +150,14 @@ int HDL_SOCKET ( int epfd, int socket )
 		}
 
 
-		HDL_HEADER_MIME( &tMsg.tContentHeader, localUrl );
-		HDL_HEADER( header, 200, nContentLen, contentType );
+		// HDL_HEADER_MIME( &tMsg.tContentHeader, localUrl );
+		// HDL_HEADER( header, 200, nContentLen, contentType );
 
 
 		printf("====================== HDL_SOCKET_Request Parsing ======================\n");
 		printf("Method: %s, URI: %s\n", tMsg.method, tMsg.uri);
 		
-		write( socket, header, strlen( header ));
+		write( socket, tMsg.tGeneralHeader, strlen( tMsg.tGeneralHeader ));
 
 	}
 

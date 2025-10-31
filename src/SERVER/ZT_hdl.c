@@ -190,6 +190,18 @@ int HDL_SOCKET ( int epfd, int socket )
     return SOCKET_OK;
 }
 
+int HDL_ACCEPT( epfd, socket )
+{
+	int rc = 0;
+
+	rc = accept( socket, (struct sockaddr *)&gtCTXInfo.tCTX[nIndx] );
+	if( rc < 0 )
+	{
+		printf("[HDL_ACCEPT] Socket Accept Fail\n");
+		return ERR_SOCKET_ACCEPT;
+	}
+	gtCTXInfo.tCTX.nClientFD = 
+}
 void HDL_400( int socket )
 {
 	const char *msg = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n";

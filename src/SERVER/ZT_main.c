@@ -1,6 +1,6 @@
 #include "ZT_Inc.h"
 
-int g_nClients;
+HttpCTX_t gtCTXInfo;
 
 int main( int argc, char **argv )
 {
@@ -38,6 +38,7 @@ int main( int argc, char **argv )
 		goto close_socket;
 	}
 
+	memset( gtCTXInfo, 0x00, sizeof(gtCTXInfo) );
 	rc = EventLoop( socket );
 	if( rc < 0 )
 	{

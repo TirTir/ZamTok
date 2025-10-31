@@ -57,6 +57,11 @@ typedef struct {
     int nConnState;
 } HttpCTX_t;
 
+typedef struct {
+	HttpCTX_t tCTX[MAX_CTX_SIZE];
+	int nCTXCnt;	
+} ZTCTX_t
+
 #define RETRY_MAX_CNT 3
 #define MAX_STATUS_MSG_LEN 64
 #define HEADER_FMT "%s %d %s\r\nContent-Length: %ld\r\nContent-Type: %s\r\n\r\n"

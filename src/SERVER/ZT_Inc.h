@@ -23,7 +23,7 @@
 
 typedef enum {
     SOCKET_OK = 0,
-    ERR_SOCKET_ARG = -1,
+    ERR_INVALID_PARAM = -1,
     ERR_SOCKET_INIT = -2,
     ERR_SOCKET_BIND = -3,
     ERR_SOCKET_CREATE = -4,

@@ -15,21 +15,21 @@ typedef struct _HeaderType {
     char value[VALUE_MAX_LEN];
 } HeaderType_t;
 
-typedef struct _ReqType{
+typedef struct _ReqType {
     char method[METHOD_MAX_LEN];
     char uri[URI_MAX_LEN];
     char version[VERSION_MAX_LEN];
     
-	HeaderType_t tGeneralHeader[HEADER_MAX_COUNT];
-    int nGeneralCnt;
+	HeaderType_t tHeaderType[HEADER_MAX_COUNT];
+    int nHeaderCnt;
 
-    HeaderType_t tContentHeader[HEADER_MAX_COUNT]; // Content 헤더 (Content-Type, Content-Length)
-    int nContentCnt;
+    //HeaderType_t tContentHeader[HEADER_MAX_COUNT]; // Content 헤더 (Content-Type, Content-Length)
+    //int nContentCnt;
 
 	char body[BODY_MAX_LEN];
 } ReqType_t;
 
-typedef struct {
+typedef struct _ResType {
     char version[VERSION_MAX_LEN];
     unsigned int unStatusCode;
     char reason[REASON_MAX_LEN];
@@ -38,12 +38,21 @@ typedef struct {
     char body[BODY_MAX_LEN];
 } ResType_t;
 
+typedef struct _SocketAddr {
+    sa_familiy_t tFamily;
+    socklen_t    unSocklen;
+    union {
+        struct sockaddr_in  ipv4;
+        struct sockaddr_in6 ipv6;
+    } addr;
+} Socket_Addr_t;
+
 #define BUF_MAX_LEN 1024
 #define FILE_MAX_LEN 256
 
 typedef struct {
 	int nClientFD;
-	struct sockaddr_in client_addr;
+	struct sockaddr_in tClientAddr;
 
 	ReqType_t tReqType;
 	ResType_t tReqType;
@@ -52,15 +61,17 @@ typedef struct {
 	char sendBuf[BUF_MAX_LEN];
 	char filePath[FILE_MAX_LEN];
 	char contentType;
-	int nContentLen;
-
+	int  nContentLen;
     int nConnState;
+
+    HttpCTX_t *ptNextCTX; // Linked List Pointer
 } HttpCTX_t;
 
-typedef struct {
-	HttpCTX_t tCTX[MAX_CTX_SIZE];
-	int nCTXCnt;	
-} ZTCTX_t
+typedef struct _ZT_CTX {
+	HttpCTX_t *ptHeadCTX;
+	int nCTXCnt;
+    pthread_mutex_t mutex;
+} ZT_CTX_t
 
 #define RETRY_MAX_CNT 3
 #define MAX_STATUS_MSG_LEN 64

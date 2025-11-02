@@ -1,5 +1,7 @@
 #include "ZT_Inc.h"
 
+extern HttpCTX_t gtCTXInfo;
+
 /*=================================================
  * name : HDL_HEADER
  * return : 
@@ -192,24 +194,35 @@ int HDL_SOCKET ( int epfd, int socket )
 
 int HDL_ACCEPT( epfd, socket )
 {
-	int rc = 0;
+	struct sockaddr_in tClientAddr = {0};
+    socklen_t unSocketLen;
 
-	rc = accept( socket, (struct sockaddr *)&gtCTXInfo.tCTX[nIndx] );
-	if( rc < 0 )
+    int rc = 0;
+    int nClientFD = -1;
+	
+    nClientFD = accept( socket, &tClientAddr, &unSocketLen );
+	if( nClientFD < 0 )
 	{
 		printf("[HDL_ACCEPT] Socket Accept Fail\n");
 		return ERR_SOCKET_ACCEPT;
 	}
-	gtCTXInfo.tCTX.nClientFD = 
+
+    rc = CTX_Http_Insert( &gtCTXInfo, nClientFD, tClientAddr, unSocketLen ); 
+    if( rc < 0 )
+    {
+        printf("[HDL_ACCEPT] Insert Client Info Fail\n");
+        return ERR_INSERT_CTX;
+    }
 }
+
 void HDL_400( int socket )
 {
 	const char *msg = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n";
 	write( socket, msg, strlen(msg) );
 }
 
-
-void HDL_500( int socket ) {
+void HDL_500( int socket ) 
+{
 	const char *msg = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n";
 	write( socket, msg, strlen(msg) );
 }

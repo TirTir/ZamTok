@@ -1,17 +1,36 @@
+
 =================== Request ===================
-GET /hello HTTP/1.1
-Host: example.com
-User-Agent: curl/7.81.0
-Accept: */*
+GET /index.html HTTP/1.1
+Host: www.example.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Connection: keep-alive
+Cookie: session_id=abc123xyz
 ===============================================
 
+=================== Request ===================
+POST /login HTTP/1.1
+Host: www.example.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 29
+
+username=yujin&password=1234
+================================================
 
 
 
 =================== Response ===================
 HTTP/1.1 200 OK
-Content-Type: text/html
-Content-Length: 13
+Date: Sat, 01 Nov 2025 09:00:00 GMT
+Server: Apache/2.4.58 (Unix)
+Content-Type: text/html; charset=UTF-8
+Content-Length: 138
 
-Hello, world!
+<!DOCTYPE html>
+<html>
+<head><title>Welcome</title></head>
+<body><h1>Hello, Yujin!</h1></body>
+</html>
 ================================================

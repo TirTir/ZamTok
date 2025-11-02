@@ -37,4 +37,14 @@ typedef enum {
     ERR_EVENTLOOP = -12,
 };
 
+typedef enum {
+    CTX_OK = 0,
+    ERR_CTX_ARG = -1,
+    ERR_CTX_ALLOC = -2,
+    ERR_CTX_LOCK = -3,
+    ERR_CTX_UNLOCK = -4,
+    ERR_CTX_INIT = -5,
+ 
+};
+
 #endif

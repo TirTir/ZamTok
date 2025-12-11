@@ -13,17 +13,18 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "ZT_log.h"
+#include "ZT_ctx.h"
 #include "ZT_evt.h"
 #include "ZT_hdl.h"
-#include "ZT_CTX.h"
 
-#define MAX_CLIENTS 10
+
 #define MAX_EVENTS 64
 #define CONTENT_TYPE_MAX_LEN 16
 
 typedef enum {
     SOCKET_OK = 0,
-    ERR_INVALID_PARAM = -1,
+    ERR_ARG_INVALID = -1,
     ERR_SOCKET_INIT = -2,
     ERR_SOCKET_BIND = -3,
     ERR_SOCKET_CREATE = -4,
@@ -35,7 +36,7 @@ typedef enum {
     ERR_EPOLL_CREATE = -10,
     ERR_NONBLOCKING = -11,
     ERR_EVENTLOOP = -12,
-};
+} zt_socket_e;
 
 typedef enum {
     CTX_OK = 0,
@@ -44,7 +45,9 @@ typedef enum {
     ERR_CTX_LOCK = -3,
     ERR_CTX_UNLOCK = -4,
     ERR_CTX_INIT = -5,
+    ERR_CTX_INSERT = -6,
+    ERR_CTX_FULL = -7,
  
-};
+} zt_ctx_e;
 
 #endif

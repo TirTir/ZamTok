@@ -1,13 +1,12 @@
 #include "ZT_Inc.h"
 
-HttpCTX_t gtCTXInfo;
+ZT_CTX_t gt_ctx_info;
+unsigned char g_client_fd[MAX_CLIENTS/8];
 
 int main( int argc, char **argv )
 {
 	int rc = -1, socket = -1;
 	int port = 0;
-
-	int nClientSockets[MAX_CLIENT];
 
 	if( argc < 1)
 	{
@@ -15,10 +14,10 @@ int main( int argc, char **argv )
 		return -1;
 	}
 
-	rc = ATOI(argv[1], &port);
-	if( rc < 0 )
+	port = atoi(argv[1]);
+	if( port < 0 )
 	{
-		printf("[ERROR] ATOI() Fail\n");
+		printf("[ERROR] Invalid port\n");
 		return -1;
 	}
 
@@ -38,7 +37,13 @@ int main( int argc, char **argv )
 		goto close_socket;
 	}
 
-	memset( gtCTXInfo, 0x00, sizeof(gtCTXInfo) );
+	rc = CTX_Init( &gt_ctx_info );
+	if( rc < 0 )
+	{
+		printf("[ERROR] CTX_Init Fail\n");
+		goto close_socket;
+	}
+
 	rc = EventLoop( socket );
 	if( rc < 0 )
 	{

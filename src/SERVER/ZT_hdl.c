@@ -1,6 +1,7 @@
 #include "ZT_Inc.h"
 
-extern HttpCTX_t gtCTXInfo;
+extern ZT_CTX_t gt_ctx_info;
+extern unsigned char g_client_fd[MAX_CLIENTS/8];
 
 /*=================================================
  * name : HDL_HEADER
@@ -8,89 +9,100 @@ extern HttpCTX_t gtCTXInfo;
  * param : *pheader, nStatus, llen, *pType
  ===================================================*/
 
-void HDL_HEADER( char *pHeader, int nStatus, long llen, char *pType )
+int HDL_HEADER( char *p_header, char *p_buf, int status, ReqType_t *t_msg )
 {
-	if( pHeader == NULL )
-    {
-        printf("[HDL_HEADER] Header is NULL\n");
-        return ERR_SOCKET_ARG;
-    }        
-    
-    if( pType == NULL )
-    {
-        printf("[HDL_HEADER] Type is NULL\n");
-        return ERR_SOCKET_ARG;
-    }
+	if( !p_header || !p_buf || status < 100 )
+		return ERR_ARG_INVALID;
 
-    if( nStatus < 100 || llen <= 0 )
-        return ERR_SOCKET_ARG;
+	char status_msg[MAX_STATUS_MSG_LEN] = "";
+	char *temp = NULL;
+	
+	char *line = strtok( p_buf, "\r\n\r\n" );
+	
+	t_msg->content_cnt = 0;
+	
+	while(line)
+	{
+		if(!strncmp( line, "Content-Type:", 13 ))
+		{
+			temp = strtok(line + 13, " ");
+            snprintf( t_msg->t_content_header[t_msg->content_cnt].name, NAME_MAX_LEN, "%s", "Content-Type");
+            snprintf( t_msg->t_content_header[t_msg->content_cnt].value, NAME_MAX_LEN, "%s", temp);
+		}
+		else if(!strncmp( line, "Content-Length:", 15 ))
+		{
+			temp = strtok(line + 15, " ");
+            snprintf( t_msg->t_content_header[t_msg->content_cnt].name, NAME_MAX_LEN, "%s", "Content-Length");
+            snprintf( t_msg->t_content_header[t_msg->content_cnt].value, NAME_MAX_LEN, "%s", temp);
+		}
 
-	char statusMsg[MAX_STATUS_MSG_LEN];
+		line = strtok( NULL, "\r\n" );	/* 한 줄씩 자르기 */
+	}
 
-	switch (nStatus)
+	switch (status)
 	{
 		case 200:
-			snprintf(msg, MAX_STATUS_MSG_LEN, "OK");
+			snprintf(status_msg, MAX_STATUS_MSG_LEN, "OK");
 			break;
 
 		case 400:
-			snprintf(msg, MAX_STATUS_MSG_LEN, "Not Found");
+			snprintf(status_msg, MAX_STATUS_MSG_LEN, "Not Found");
 			break;
 
 		case 500:
 		default:
-			snprintf(msg, MAX_STATUS_MSG_LEN, "Internal Server Error");
+			snprintf(status_msg, MAX_STATUS_MSG_LEN, "Internal Server Error");
 			break;
 	}
 
-	// snprintf( pHeader, HEADER_FMT, nStatus, msg, llen, pType );
+	snprintf( p_header, HEADER_FMT, t_msg->version, status, status_msg, t_msg->t_content_header[0].value, t_msg->t_content_header[1].value);
 }
 
 
 /*=================================================
  * name : HDL_HEADER_MIME
  * return :
- * param : *pContentType, nSize, "%s", *pUri, sizeof(pContentType) 
+ * param : *pContentType, nSize, *pUri 
  ===================================================*/
 
-int HDL_HEADER_MIME( char *pContentType, size_t nSize, const char *pUri )
+int HDL_HEADER_MIME( char *p_content_type, int size, const char *p_uri )
 {
-	if( pContentType == NULL )
+	if( p_content_type == NULL )
 	{
 		printf("[HDL_HEADER_MIME] Content Type is NULL\n");
-		return ERR_SOCKET_ARG;
+		return ERR_ARG_INVALID;
 	}
 	
-	if( pUri == NULL )
+	if( p_uri == NULL )
 	{
 		printf("[HDL_HEADER_MIME] URI is NULL\n");
-		return ERR_SOCKET_ARG;
+		return ERR_ARG_INVALID;
 	}
 
-	char *ext = strrchr( pUri, '.' );
+	char *p_ext = strrchr( p_uri, '.' );
 
-	if( !strcmp( ext, ".html") )
+	if( !strcmp( p_ext, ".html") )
 	{
-		snprintf( pContentType, nSize, "%s", "text/html" );
+		snprintf( p_content_type, size, "%s", "text/html" );
 	}
-	else if( !strcmp( ext, ".jpg") || !strcmp( ext, ".jpeg" ))
+	else if( !strcmp( p_ext, ".jpg") || !strcmp( p_ext, ".jpeg" ))
 	{
-		snprintf( pContentType, nSize, "%s", "image/jpeg" );
+		snprintf( p_content_type, size, "%s", "image/jpeg" );
 	}
-	else if( !strcmp( ext, ".png") )
+	else if( !strcmp( p_ext, ".png") )
 	{
-		snprintf( pContentType, nSize, "%s", "image/png" );
+		snprintf( p_content_type, size, "%s", "image/png" );
 	}
-	else if( !strcmp( ext, ".CSS") )
+	else if( !strcmp( p_ext, ".CSS") )
 	{
-		snprintf( pContentType, nSize, "%s", "text/CSS" );
+		snprintf( p_content_type, size, "%s", "text/CSS" );
 	}
-	else if( !strcmp( ext, ".js") )
+	else if( !strcmp( p_ext, ".js") )
 	{
-		snprintf( pContentType, nSize, "%s", "text/javascript" );
+		snprintf( p_content_type, size, "%s", "text/javascript" );
 	}
 	else 
-		snprintf( pContentType, nSize, "%s", "text/plain" );
+		snprintf( p_content_type, size, "%s", "text/plain" );
 
 	return SOCKET_OK;
 }
@@ -102,37 +114,38 @@ int HDL_HEADER_MIME( char *pContentType, size_t nSize, const char *pUri )
  ===================================================*/
 int HDL_SOCKET ( int epfd, int socket )
 {
-	ReqType_t tMsg = {0};
+	ReqType_t t_msg = {0};
     //memset( &tMsg, 0x00, sizeof(tMsg) );
 	
     char parse[BUF_MAX_LEN] = {0};
 	char buf[BUF_MAX_LEN] = {0};
 	
-    size_t n = 0;
-	int nRetryCnt = 0;
+	int n, rc, status;
+	int retry_cnt = 0;
 
 	if( epfd < 0 )
 	{
 		printf("[HDL_SOCKET] Epoll FD is Wrong\n");
-		return ERR_SOCKET_ARG;
+		return ERR_ARG_INVALID;
 	}
 
 	if( socket < 0 )
 	{
 		printf("[HDL_SOCKET] Socket FD is Wrong\n");
-		return ERR_SOCKET_ARG;
+		return ERR_ARG_INVALID;
 	}
 
-	nRetryCnt = 0;
-	while( nRetryCnt < RETRY_MAX_CNT )
+	while( retry_cnt < RETRY_MAX_CNT )
 	{
+		char header[HEADER_MAX_LEN] = "";
+
 		errno = 0;
 		n = read( socket, buf, sizeof(buf) ); 
 		
 		if( n < 0 && ( errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR ) )
 		{
 			printf("[HDL_SOCKET] Read Socket Fail FD=%d <%d:%s>\n", socket, errno, strerror(errno));
-			nRetryCnt++;
+			retry_cnt++;
 			continue;
 		}
 
@@ -144,42 +157,46 @@ int HDL_SOCKET ( int epfd, int socket )
 		snprintf( parse, sizeof(parse), "%s", buf );
 
 		char *method = strtok( parse, " " );
-		char *url = strtok( NULL, " " );
+		char *uri = strtok( NULL, " " );
 		char *version = strtok( NULL, "\r\n" );
 
-		if( !method || !url || !version )
+		if( !method || !uri || !version )
 		{
 			printf("[HDL_SOCKET] Invalid Request Line\n");
 			HDL_400( socket );
-			return ERR_SOCKET_ARG;
+			return ERR_ARG_INVALID;
 		}
 
-		/* Data Parsing */
-		snprintf( tMsg.method, sizeof(tMsg.method), "%s", method );
-		snprintf( tMsg.uri, sizeof(tMsg.uri), "%s", url );
-		snprintf( tMsg.version, sizeof(tMsg.version), "%s", version );
+		/* Start Line Parsing */
+		snprintf( t_msg.method, sizeof(t_msg.method), "%s", method );
+		snprintf( t_msg.uri, sizeof(t_msg.uri), "%s", uri );
+		snprintf( t_msg.version, sizeof(t_msg.version), "%s", version );
 
 
-		/* 요청 경로 설정 */
-		if( !strcmp( tMsg.uri, "/"))
-			snprintf( tMsg.uri, sizeof(tMsg.uri), "%s", "/indx.html" );
+		if( !strcmp( t_msg.uri, "/"))
+			snprintf( t_msg.uri, sizeof(t_msg.uri), "%s", "/indx.html" );
 
-		rc = HDL_HEADER_MIME( &tMsg.tContentHeader[tReq.nContentCnt].value, VALUE_MAX_LEN, tMsg.Uri );
+		rc = HDL_HEADER_MIME( t_msg.t_content_header[t_msg.content_cnt].value, VALUE_MAX_LEN, t_msg.uri );
 		if( rc == SOCKET_OK )
         {
-            snprintf( tMsg.tContentHeader[tReq.nContentCnt].name, NAME_MAX_LEN, "%s", "Content-Type");
-            nStatus = 200;
+            status = 200;
         }
         else
-            nStatus = 400;
-     
-        HDL_HEADER( header, 200, nContentLen, tMsg.tContentHeader[tReq.nContentCnt].value );
+		{
+            status = 400;
+		}
 
+        rc = HDL_HEADER( header, buf, status, &t_msg );
+		if( rc < 0 )
+		{
+			LOG_ERR("HDL_HEADER fail\n");
+	        return ERR_SOCKET_READ;
+		}
 
 		printf("====================== HDL_SOCKET_Request Parsing ======================\n");
-		printf("Method: %s, URI: %s\n", tMsg.method, tMsg.uri);
+		printf("Method: %s, URI: %s\n", t_msg.method, t_msg.uri);
 		
-		write( socket, tMsg.tGeneralHeader, strlen( tMsg.tGeneralHeader ));
+		//write( socket, t_msg.t_general_header, strlen( t_msg.t_general_header ));
 
 	}
 
@@ -192,37 +209,56 @@ int HDL_SOCKET ( int epfd, int socket )
     return SOCKET_OK;
 }
 
-int HDL_ACCEPT( epfd, socket )
+int HDL_ACCEPT( int socket )
 {
-	struct sockaddr_in tClientAddr = {0};
-    socklen_t unSocketLen;
+	struct sockaddr_in t_client_addr = {0};
+    socklen_t un_socket_len = sizeof(t_client_addr);
 
     int rc = 0;
-    int nClientFD = -1;
+    int client_fd = -1;
 	
-    nClientFD = accept( socket, &tClientAddr, &unSocketLen );
-	if( nClientFD < 0 )
+    client_fd = accept( socket, (struct sockaddr *)&t_client_addr, &un_socket_len );
+	if( client_fd < 0 )
 	{
 		printf("[HDL_ACCEPT] Socket Accept Fail\n");
 		return ERR_SOCKET_ACCEPT;
 	}
 
-    rc = CTX_Http_Insert( &gtCTXInfo, nClientFD, tClientAddr, unSocketLen ); 
+    rc = CTX_Http_Insert( &gt_ctx_info, client_fd, t_client_addr, un_socket_len ); 
     if( rc < 0 )
     {
         printf("[HDL_ACCEPT] Insert Client Info Fail\n");
-        return ERR_INSERT_CTX;
+        return ERR_CTX_INSERT;
     }
+	
+	/* FD pool에 클라이언트 등록 */
+	g_client_fd[client_fd/8] |= ( 1 << ( client_fd % 8 ));
+
+
+	return SOCKET_OK;
 }
 
 void HDL_400( int socket )
 {
+	int rc = 0;
+
 	const char *msg = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n";
-	write( socket, msg, strlen(msg) );
+	rc = write( socket, msg, strlen(msg) );
+	if( rc < 0 )
+	{
+		LOG_ERR("write fail\n");
+	}
 }
 
 void HDL_500( int socket ) 
 {
+	int rc = 0;
+
 	const char *msg = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n";
-	write( socket, msg, strlen(msg) );
+	rc = write( socket, msg, strlen(msg) );
+	if( rc < 0 )
+	{
+		LOG_ERR("write fail\n");
+	}
+
 }

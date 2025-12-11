@@ -6,11 +6,10 @@ RELEASE_DIR = ../release
 TARGET = $(RELEASE_DIR)/main
 
 SRCS = ZT_main.c \
-       ZT_evt.c  \
+       ZT_ctx.c	 \
+	   ZT_evt.c  \
        ZT_hdl.c  \
-       ZT_http.c \
-       ZT_atoi.c \
-       ZT_queue.c
+	   ZT_queue.c
 
 OBJS = $(SRCS:.c=.o)
 

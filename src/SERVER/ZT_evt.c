@@ -1,18 +1,5 @@
 #include "ZT_Inc.h"
 
-/*
-typedef struct {
-	char *pName;
-	int cmd;
-	char *pDoc;
-}
-
-stCommand_t gpCommands [] = {
-	{ "help", 1, "							:This Screen" },
-	{ (char*)NULL, 0, NULL }	
-}
-*/
-
 extern g_nClients[MAX_CLIENTS];
 
 int SET_NONBLOCKING (int socket )
@@ -23,7 +10,7 @@ int SET_NONBLOCKING (int socket )
 	if( socket < 0 )
 	{
 		printf("[SET_NONBLOCKING] Socket is Wrong\n");
-		return ERR_NONBLOCKING_ARGS;
+		return ERR_ARG_INVALID;
 	}
 
 	/* Get Original FD Status */
@@ -34,7 +21,7 @@ int SET_NONBLOCKING (int socket )
 		return ERR_NONBLOCKING;
 	}
 
-	rc = fnctl( socket, F_SETFL, flags | O_NONBLOCK );
+	rc = fcntl( socket, F_SETFL, flags | O_NONBLOCK );
 	if( rc < 0 )
 	{
 		printf("[SET_NONBLOCKING] Fnctl Nonblock Set Fail\n");
@@ -73,9 +60,8 @@ int SOCKET_Bind ( int socket, int port )
 
 int SOCKET_Init ( int *pSocket )
 {
-	int i, rc = 0;
-	int fd = -1;
-	int opt = 1, flag = 0;
+	int rc = 0;
+	int fd = -1, opt = 1;
 	
 	if( pSocket == NULL )
 	{
@@ -98,13 +84,6 @@ int SOCKET_Init ( int *pSocket )
 		return ERR_SOCKET_INIT;
 	}
 	
-	/*
-	   for(i = 0; i < MAX_CLIENTS; i++)
-	{
-		g_nClients[i] = -1;
-	}
-	*/
-
 	return SOCKET_OK;
 
 }
@@ -112,7 +91,6 @@ int SOCKET_Init ( int *pSocket )
 int SOCKET_Accept ( int socket, int epfd )
 {
 	struct sockaddr_in tClientAddr;
-	socklen_t addrlen = sizeof(tClientAddr);
 	
 	struct epoll_event tEv;
 
@@ -122,13 +100,13 @@ int SOCKET_Accept ( int socket, int epfd )
 	if ( socket < 0 )
 	{
 		printf("[SOCKET_Accept] Socket FD is Wrong\n");
-		return ERR_SOCKET_ARG;
+		return ERR_ARG_INVALID;
 	}
 
 	if ( epfd < 0 )
 	{
 		printf("[SOCKET_Accept] Epoll FD is Wrong\n");
-		return ERR_SOCKET_ARG;
+		return ERR_ARG_INVALID;
 	}
 	
 	while(( nClientFD = accept( socket, NULL, NULL )) > 0 )
@@ -147,7 +125,7 @@ int SOCKET_Accept ( int socket, int epfd )
 	    	break;
     }
 
-	if( rc < 0 || nClientFD < 0 || errno != EAGAIN && errno != EWOULDBLOCK )
+	if( rc < 0 || nClientFD < 0 || ( errno != EAGAIN && errno != EWOULDBLOCK ))
 	{
 		printf("[SOCKET_Accept] Socket Accept Fail <%d:%s>\n", errno, strerror(errno));
 		return ERR_SOCKET_ACCEPT;
@@ -162,13 +140,13 @@ int EventLoop ( int socket )
 	   tEvs: fd에서 발생한 이벤트들 -> epoll_wait() */
 	struct epoll_event tEv, tEvents[MAX_EVENTS];
 	
-	int fd, epfd, flags = -1;
+	int fd, epfd;
 	int i, n, rc = 0;
 
 	if ( socket < 0 )
 	{
 		printf("[EventLoop] Socket FD is Wrong\n");
-		return ERR_SOCKET_ARG;
+		return ERR_ARG_INVALID;
 	}
 
 	/* create epoll instance */
@@ -223,7 +201,7 @@ int EventLoop ( int socket )
 			{
 				/* New Clients Connection */
 						
-				rc = HDL_ACCEPT( epfd, socket );
+				rc = HDL_ACCEPT( socket );
 				if( rc < 0 )
 				{
 					printf("[EventLoop] HDL_ACCEPT fail\n");

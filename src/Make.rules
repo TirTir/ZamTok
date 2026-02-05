@@ -1,0 +1,26 @@
+CC ?= gcc
+CFLAGS ?= -g -Wall -Wextra -O2
+LDFLAGS ?=
+RM ?= rm -f
+
+RELEASE_DIR ?= ../release
+TARGET_NAME := $(notdir $(abspath $(RELEASE_DIR)/..))
+TARGET ?= $(RELEASE_DIR)/$(TARGET_NAME)
+
+SRCS ?=
+OBJS := $(SRCS:.c=.o)
+
+all: $(RELEASE_DIR) $(TARGET)
+
+$(RELEASE_DIR):
+	mkdir -p $(RELEASE_DIR)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(TARGET): $(OBJS)
+	$(CC) $(LDFLAGS) -o $@ $^
+
+clean:
+	$(RM) $(OBJS) $(TARGET)
+

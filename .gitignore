@@ -1,6 +1,8 @@
 # 빌드 결과물 제외
 bin/
 obj/
+log/
+release/
 *.log
 *.tmp
 *.user

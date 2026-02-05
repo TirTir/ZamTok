@@ -1,4 +1,5 @@
 #include "ZT_Inc.h"
+#include "ZT_hdl.h"
 
 extern g_nClients[MAX_CLIENTS];
 
@@ -36,6 +37,18 @@ int SOCKET_Bind ( int socket, int port )
 	int rc = 0;
 	struct sockaddr_in sin;
 
+	if( socket < 0 )
+	{
+		printf("[SOCKET_Bind] Socket is Wrong\n");
+		return ERR_ARG_INVALID;
+	}
+
+	if( port < 0 )
+	{
+		printf("[SOCKET_Bind] Port is Wrong\n");
+		return ERR_ARG_INVALID;
+	}
+
 	sin.sin_family = AF_INET;
 	sin.sin_addr.s_addr = inet_addr( "127.0.0.1" );
 	sin.sin_port = htons( port );
@@ -68,8 +81,10 @@ int SOCKET_Init ( int *pSocket )
 		printf("[SOCKET_Init] Socket is NULL\n");
 	}
 
-	/* create socket
-	*) domain / type / protocol */
+	/* 
+	*) create socket
+	*) domain / type / protocol 
+	*/
 	fd = socket( AF_INET, SOCK_STREAM, 0 );
 	if( fd < 0 )
 	{
@@ -83,6 +98,8 @@ int SOCKET_Init ( int *pSocket )
 		printf("[SOCKET_Init] Socket Set Opt Fail <%d:%s>\n", errno, strerror(errno));
 		return ERR_SOCKET_INIT;
 	}
+
+	*pSocket = fd;
 	
 	return SOCKET_OK;
 

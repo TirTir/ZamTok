@@ -2,6 +2,7 @@
 #define _ZT_HDL_H_
 
 #include "ZT_ctx.h"
+#include "ZT_Inc.h"
 
 int HDL_HEADER( char *p_header, char *p_buf, int status, ReqType_t *t_msg );
 int HDL_HEADER_MIME( char *p_content_type, int size, const char *p_uri );

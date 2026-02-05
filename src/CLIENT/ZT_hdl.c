@@ -254,27 +254,9 @@ int HDL_ACCEPT( int socket )
 	return SOCKET_OK;
 }
 
-void HDL_400( int socket )
+#define HEADER_FMT "HTTP/%s %d %s\r\nContent-Length: %s\r\nContent-Type: %s\r\n\r\n"
+
+int *HDL_CREATE( )
 {
-	int rc = 0;
-
-	const char *msg = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n";
-	rc = write( socket, msg, strlen(msg) );
-	if( rc < 0 )
-	{
-		printf("[HDL_400] write fail\n");
-	}
-}
-
-void HDL_500( int socket ) 
-{
-	int rc = 0;
-
-	const char *msg = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n";
-	rc = write( socket, msg, strlen(msg) );
-	if( rc < 0 )
-	{
-		printf("[HDL_500] write fail\n");
-	}
-
+	return SOCKET_OK;
 }

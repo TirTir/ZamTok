@@ -8,9 +8,8 @@ int main( int argc, char **argv )
 	int rc = -1, socket = -1;
 	int port = 0;
 
-	if( argc < 1)
-	{
-		printf("[INFO] Use Format\n");
+	if (argc < 2) {
+		printf("[INFO] Use: %s <port>\n", argv[0] ? argv[0] : "CLIENT");
 		return -1;
 	}
 

@@ -1,5 +1,9 @@
 #include "ZT_Inc.h"
+#include "ZT_ctx.h"
+#include "ZT_log.h"
 
+/* 각 %s에 최대 길이 제한하여 HEADER_MAX_LEN(256) 초과 방지 */
+#define HEADER_FMT "HTTP/%.15s %d %.63s\r\nContent-Length: %.63s\r\nContent-Type: %.63s\r\n\r\n"
 
 /*------------------------------------------------
  * Global Variable
@@ -9,11 +13,30 @@ extern ZT_CTX_t gt_ctx_info;
 extern unsigned char g_client_fd[MAX_CLIENTS/8];
 
 /*------------------------------------------------
- * Extern Function
+ * HTTP Error Response
 -------------------------------------------------*/
 
-void HDL_400 ( int socket );
-void HDL_500 ( int socket );
+void HDL_400(int socket)
+{
+	int rc = -1;
+	const char *msg = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+	rc = write(socket, msg, strlen(msg));
+	if (rc < 0) {
+		LOG_ERR("Write Fail <%d:%s>\n", errno, strerror(errno));
+	}
+	return;
+}
+
+void HDL_500(int socket)
+{
+	int rc = -1;
+	const char *msg = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+	rc = write(socket, msg, strlen(msg));
+	if (rc < 0) {
+		LOG_ERR("Write Fail <%d:%s>\n", errno, strerror(errno));
+	}
+	return;
+}
 
 
 /*=================================================
@@ -72,6 +95,8 @@ int HDL_HEADER( char *p_header, char *p_buf, int status, ReqType_t *t_msg )
 			t_msg->version, status, status_msg, 
 			t_msg->t_content_header[0].value, 
 			t_msg->t_content_header[1].value );
+
+	return SOCKET_OK;
 }
 
 
@@ -253,8 +278,6 @@ int HDL_ACCEPT( int socket )
 
 	return SOCKET_OK;
 }
-
-#define HEADER_FMT "HTTP/%s %d %s\r\nContent-Length: %s\r\nContent-Type: %s\r\n\r\n"
 
 int *HDL_CREATE( )
 {

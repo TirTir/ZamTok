@@ -9,9 +9,9 @@
 !_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
 !_TAG_PROGRAM_URL	https://ctags.io/	/official site/
 !_TAG_PROGRAM_VERSION	5.9.0	//
+$(OBJDIR)	Makefile	/^$(OBJDIR):$/;"	t
 $(OBJDIR)/%.o	Makefile	/^$(OBJDIR)\/%.o: %.c | $(OBJDIR)$/;"	t
-$(RELEASE_DIR)	Makefile	/^$(RELEASE_DIR):$/;"	t
-$(TARGET)	Makefile	/^$(TARGET): $(OBJS)$/;"	t
+$(RELEASE_DIR)/$(TARGET_NAME)	Makefile	/^$(RELEASE_DIR)\/$(TARGET_NAME): $(OBJS) | $(OBJDIR)$/;"	t
 %.o	Makefile	/^%.o: %.c$/;"	t
 BODY_MAX_LEN	ZT_ctx.h	/^#define BODY_MAX_LEN /;"	d
 BUF_MAX_LEN	ZT_ctx.h	/^#define BUF_MAX_LEN /;"	d
@@ -19,9 +19,11 @@ CC	Makefile	/^CC = gcc$/;"	m
 CFLAGS	Makefile	/^CFLAGS = -g -Wall -Wextra -O2$/;"	m
 CLIENT_OK	ZT_Inc.h	/^    CLIENT_OK = 0,$/;"	e	enum:__anonaff51e220103
 CONTENT_TYPE_MAX_LEN	ZT_Inc.h	/^#define CONTENT_TYPE_MAX_LEN /;"	d
+CTRL_proc	ZT_ctrl.c	/^void CTRL_proc(int argc, char **argv)$/;"	f	typeref:typename:void
 CTX_Http_Insert	ZT_ctx.c	/^int CTX_Http_Insert(ZT_CTX_t *pt_ctx, const int client_fd, struct sockaddr_in t_client_addr)$/;"	f	typeref:typename:int
 CTX_Init	ZT_ctx.c	/^int CTX_Init(ZT_CTX_t *pt_ctx)$/;"	f	typeref:typename:int
 CTX_OK	ZT_Inc.h	/^    CTX_OK = 0,$/;"	e	enum:__anonaff51e220103
+EMAIL_MAX_LEN	ZT_chat.h	/^#define EMAIL_MAX_LEN /;"	d
 ERR_ARG_INVALID	ZT_Inc.h	/^    ERR_ARG_INVALID = -1,$/;"	e	enum:__anonaff51e220103
 ERR_CTX_ALLOC	ZT_Inc.h	/^    ERR_CTX_ALLOC = -20,$/;"	e	enum:__anonaff51e220103
 ERR_CTX_FULL	ZT_Inc.h	/^    ERR_CTX_FULL = -23,$/;"	e	enum:__anonaff51e220103
@@ -48,39 +50,53 @@ HDL_CREATE	ZT_hdl.c	/^int *HDL_CREATE( )$/;"	f	typeref:typename:int *
 HDL_HEADER	ZT_hdl.c	/^int HDL_HEADER( char *p_header, char *p_buf, int status, ReqType_t *t_msg )$/;"	f	typeref:typename:int
 HDL_HEADER_MIME	ZT_hdl.c	/^int HDL_HEADER_MIME( char *p_content_type, int size, const char *p_uri )$/;"	f	typeref:typename:int
 HDL_SOCKET	ZT_hdl.c	/^int HDL_SOCKET ( int epfd, int socket )$/;"	f	typeref:typename:int
-HEADER_FMT	ZT_ctx.h	/^#define HEADER_FMT /;"	d
 HEADER_FMT	ZT_hdl.c	/^#define HEADER_FMT /;"	d	file:
 HEADER_MAX_COUNT	ZT_ctx.h	/^#define HEADER_MAX_COUNT /;"	d
 HEADER_MAX_LEN	ZT_ctx.h	/^#define HEADER_MAX_LEN /;"	d
-HTTP_REQUEST_FMT	ZT_sock.c	/^#define HTTP_REQUEST_FMT /;"	d	file:
+HTTP_REQUEST_FMT	ZT_sock.h	/^#define HTTP_REQUEST_FMT /;"	d
 HeaderType_t	ZT_ctx.h	/^} HeaderType_t;$/;"	t	typeref:struct:_HeaderType
 HttpCTX_t	ZT_ctx.h	/^typedef struct HttpCTX_t {$/;"	s
 HttpCTX_t	ZT_ctx.h	/^} HttpCTX_t;$/;"	t	typeref:struct:HttpCTX_t
+Join	ZT_chat.c	/^int Join(int socket, const user_t *pt_user)$/;"	f	typeref:typename:int
 LOG_ERR	ZT_log.h	/^#define LOG_ERR(/;"	d
+Login	ZT_chat.c	/^int Login(int socket, const char *str_user_id, const char *str_password)$/;"	f	typeref:typename:int
+MAX_ARGC	ZT_evt.c	/^#define MAX_ARGC /;"	d	file:
 MAX_CLIENTS	ZT_Inc.h	/^#define MAX_CLIENTS /;"	d
 MAX_CLIENTS	ZT_ctx.h	/^#define MAX_CLIENTS /;"	d
+MAX_CMD_LEN	ZT_evt.c	/^#define MAX_CMD_LEN /;"	d	file:
 MAX_EVENTS	ZT_Inc.h	/^#define MAX_EVENTS /;"	d
 MAX_STATUS_MSG_LEN	ZT_ctx.h	/^#define MAX_STATUS_MSG_LEN /;"	d
+MESSAGE_MAX_LEN	ZT_chat.h	/^#define MESSAGE_MAX_LEN /;"	d
 METHOD_MAX_LEN	ZT_ctx.h	/^#define METHOD_MAX_LEN /;"	d
+MKFDIR	Makefile	/^MKFDIR := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))$/;"	m
+Message	ZT_chat.h	/^typedef struct Message {$/;"	s
 NAME_MAX_LEN	ZT_ctx.h	/^#define NAME_MAX_LEN /;"	d
 OBJDIR	Makefile	/^OBJDIR := $(RELEASE_DIR)$/;"	m
 OBJS	Makefile	/^OBJS = $(SRCS:%.c=$(OBJDIR)\/%.o)$/;"	m
+PHONE_MAX_LEN	ZT_chat.h	/^#define PHONE_MAX_LEN /;"	d
+RB_RELEASE_DIR	Makefile	/^RB_RELEASE_DIR := $(MKFDIR)..\/release$/;"	m
 REASON_MAX_LEN	ZT_ctx.h	/^#define REASON_MAX_LEN /;"	d
-RELEASE_DIR	Makefile	/^RELEASE_DIR ?= ..\/release$/;"	m
+RELEASE_DIR	Makefile	/^RELEASE_DIR ?= release$/;"	m
 RETRY_MAX_CNT	ZT_ctx.h	/^#define RETRY_MAX_CNT /;"	d
 RM	Makefile	/^RM = rm -f$/;"	m
 ReqType_t	ZT_ctx.h	/^} ReqType_t;$/;"	t	typeref:struct:_ReqType
 ResType_t	ZT_ctx.h	/^} ResType_t;$/;"	t	typeref:struct:_ResType
+SESSION_ID_MAX_LEN	ZT_chat.h	/^#define SESSION_ID_MAX_LEN /;"	d
 SET_NONBLOCKING	ZT_sock.c	/^int SET_NONBLOCKING(int socket)$/;"	f	typeref:typename:int
 SOCKET_Connect	ZT_sock.c	/^int SOCKET_Connect(int socket, const char *host, int port)$/;"	f	typeref:typename:int
 SOCKET_Init	ZT_sock.c	/^int SOCKET_Init(int *pSocket)$/;"	f	typeref:typename:int
 SOCKET_OK	ZT_Inc.h	/^    SOCKET_OK = 0,$/;"	e	enum:__anonaff51e220103
 SOCKET_SendHttpRequest	ZT_sock.c	/^int SOCKET_SendHttpRequest(int socket, const char *host, int port,$/;"	f	typeref:typename:int
 SRCS	Makefile	/^SRCS = ZT_main.c \\$/;"	m
+Session	ZT_chat.h	/^typedef struct Session {$/;"	s
 Socket_Addr_t	ZT_ctx.h	/^} Socket_Addr_t;$/;"	t	typeref:struct:_SocketAddr
-TARGET	Makefile	/^TARGET ?= $(RELEASE_DIR)\/$(TARGET_NAME)$/;"	m
-TARGET_NAME	Makefile	/^TARGET_NAME := $(notdir $(abspath .\/))$/;"	m
+TARGET_NAME	Makefile	/^TARGET_NAME := $(notdir $(patsubst %\/,%,$(MKFDIR)))$/;"	m
 URI_MAX_LEN	ZT_ctx.h	/^#define URI_MAX_LEN /;"	d
+USER_ID_MAX_LEN	ZT_chat.h	/^#define USER_ID_MAX_LEN /;"	d
+USER_NAME_MAX_LEN	ZT_chat.h	/^#define USER_NAME_MAX_LEN /;"	d
+USER_TYPE_ADMIN	ZT_chat.h	/^    USER_TYPE_ADMIN = 1,$/;"	e	enum:__anonead279a80103
+USER_TYPE_NORMAL	ZT_chat.h	/^    USER_TYPE_NORMAL = 0,$/;"	e	enum:__anonead279a80103
+User	ZT_chat.h	/^typedef struct User {$/;"	s
 VALUE_MAX_LEN	ZT_ctx.h	/^#define VALUE_MAX_LEN /;"	d
 VERSION_MAX_LEN	ZT_ctx.h	/^#define VERSION_MAX_LEN /;"	d
 ZT_CTX_t	ZT_ctx.h	/^} ZT_CTX_t;$/;"	t	typeref:struct:_ZT_CTX
@@ -88,6 +104,8 @@ _HeaderType	ZT_ctx.h	/^typedef struct _HeaderType {$/;"	s
 _ReqType	ZT_ctx.h	/^typedef struct _ReqType {$/;"	s
 _ResType	ZT_ctx.h	/^typedef struct _ResType {$/;"	s
 _SocketAddr	ZT_ctx.h	/^typedef struct _SocketAddr {$/;"	s
+_ZT_CHAT_H_	ZT_chat.h	/^#define _ZT_CHAT_H_$/;"	d
+_ZT_CTRL_H_	ZT_ctrl.h	/^#define _ZT_CTRL_H_$/;"	d
 _ZT_CTX	ZT_ctx.h	/^typedef struct _ZT_CTX {$/;"	s
 _ZT_CTX_H_	ZT_ctx.h	/^#define _ZT_CTX_H_$/;"	d
 _ZT_EVT_H_	ZT_evt.h	/^#define _ZT_EVT_H_$/;"	d
@@ -97,8 +115,9 @@ _ZT_LOG_H_	ZT_log.h	/^#define _ZT_LOG_H_$/;"	d
 _ZT_SOCK_H_	ZT_sock.h	/^#define _ZT_SOCK_H_$/;"	d
 __anonaff51e220103	ZT_Inc.h	/^typedef enum {$/;"	g
 __anonb1cf3ed7010a	ZT_ctx.h	/^    union {$/;"	u	struct:_SocketAddr
+__anonead279a80103	ZT_chat.h	/^typedef enum {$/;"	g
 addr	ZT_ctx.h	/^    } addr;$/;"	m	struct:_SocketAddr	typeref:union:_SocketAddr::__anonb1cf3ed7010a
-all	Makefile	/^all: $(TARGET)$/;"	t
+all	Makefile	/^all: $(RELEASE_DIR)\/$(TARGET_NAME)$/;"	t
 body	ZT_ctx.h	/^    char body[BODY_MAX_LEN];$/;"	m	struct:_ReqType	typeref:typename:char[]
 body	ZT_ctx.h	/^    char body[BODY_MAX_LEN];$/;"	m	struct:_ResType	typeref:typename:char[]
 clean	Makefile	/^clean:$/;"	t
@@ -116,14 +135,25 @@ header_cnt	ZT_ctx.h	/^    int header_cnt;$/;"	m	struct:_ReqType	typeref:typename
 ipv4	ZT_ctx.h	/^        struct sockaddr_in  ipv4;$/;"	m	union:_SocketAddr::__anonb1cf3ed7010a	typeref:struct:sockaddr_in
 ipv6	ZT_ctx.h	/^        struct sockaddr_in6 ipv6;$/;"	m	union:_SocketAddr::__anonb1cf3ed7010a	typeref:struct:sockaddr_in6
 main	ZT_main.c	/^int main(int argc, char **argv)$/;"	f	typeref:typename:int
+message_t	ZT_chat.h	/^} message_t;$/;"	t	typeref:struct:Message
 method	ZT_ctx.h	/^    char method[METHOD_MAX_LEN];$/;"	m	struct:_ReqType	typeref:typename:char[]
 mutex	ZT_ctx.h	/^    pthread_mutex_t mutex;$/;"	m	struct:_ZT_CTX	typeref:typename:pthread_mutex_t
 name	ZT_ctx.h	/^    char name[NAME_MAX_LEN];$/;"	m	struct:_HeaderType	typeref:typename:char[]
+parse_cmd_line	ZT_evt.c	/^static int parse_cmd_line(char *line, char **argv, int max_argc)$/;"	f	typeref:typename:int	file:
 pt_http_ctx	ZT_ctx.h	/^    HttpCTX_t *pt_http_ctx;$/;"	m	struct:_ZT_CTX	typeref:typename:HttpCTX_t *
 pt_next_ctx	ZT_ctx.h	/^    struct HttpCTX_t *pt_next_ctx;$/;"	m	struct:HttpCTX_t	typeref:struct:HttpCTX_t *
+rb	Makefile	/^rb: $(RELEASE_DIR)\/$(TARGET_NAME)$/;"	t
+rb_clean	Makefile	/^rb_clean:$/;"	t
 reason	ZT_ctx.h	/^    char reason[REASON_MAX_LEN];$/;"	m	struct:_ResType	typeref:typename:char[]
 recv_buf	ZT_ctx.h	/^    char recv_buf[BUF_MAX_LEN];$/;"	m	struct:HttpCTX_t	typeref:typename:char[]
 send_buf	ZT_ctx.h	/^    char send_buf[BUF_MAX_LEN];$/;"	m	struct:HttpCTX_t	typeref:typename:char[]
+session_id	ZT_chat.h	/^    char session_id[SESSION_ID_MAX_LEN];$/;"	m	struct:Session	typeref:typename:char[]
+session_t	ZT_chat.h	/^} session_t;$/;"	t	typeref:struct:Session
+str_email	ZT_chat.h	/^    char str_email[EMAIL_MAX_LEN];$/;"	m	struct:User	typeref:typename:char[]
+str_message	ZT_chat.h	/^    char str_message[MESSAGE_MAX_LEN];$/;"	m	struct:Message	typeref:typename:char[]
+str_name	ZT_chat.h	/^    char str_name[USER_NAME_MAX_LEN];$/;"	m	struct:User	typeref:typename:char[]
+str_phone	ZT_chat.h	/^    char str_phone[PHONE_MAX_LEN];$/;"	m	struct:User	typeref:typename:char[]
+str_user_id	ZT_chat.h	/^    char str_user_id[USER_ID_MAX_LEN];$/;"	m	struct:User	typeref:typename:char[]
 t_client_addr	ZT_ctx.h	/^    struct sockaddr_in t_client_addr;$/;"	m	struct:HttpCTX_t	typeref:struct:sockaddr_in
 t_content_header	ZT_ctx.h	/^    HeaderType_t t_content_header[HEADER_MAX_COUNT];$/;"	m	struct:_ReqType	typeref:typename:HeaderType_t[]
 t_family	ZT_ctx.h	/^    sa_family_t t_family;$/;"	m	struct:_SocketAddr	typeref:typename:sa_family_t
@@ -131,9 +161,16 @@ t_header_type	ZT_ctx.h	/^    HeaderType_t t_header_type;$/;"	m	struct:_ResType	t
 t_header_type	ZT_ctx.h	/^    HeaderType_t t_header_type[HEADER_MAX_COUNT];$/;"	m	struct:_ReqType	typeref:typename:HeaderType_t[]
 t_req_type	ZT_ctx.h	/^    ReqType_t t_req_type;$/;"	m	struct:HttpCTX_t	typeref:typename:ReqType_t
 t_res_type	ZT_ctx.h	/^    ResType_t t_res_type;$/;"	m	struct:HttpCTX_t	typeref:typename:ResType_t
+t_time	ZT_chat.h	/^    time_t t_time;$/;"	m	struct:Message	typeref:typename:time_t
+u_from_id	ZT_chat.h	/^    unsigned int u_from_id;$/;"	m	struct:Message	typeref:typename:unsigned int
+u_to_id	ZT_chat.h	/^    unsigned int u_to_id;$/;"	m	struct:Message	typeref:typename:unsigned int
 un_socklen	ZT_ctx.h	/^    socklen_t un_socklen;$/;"	m	struct:_SocketAddr	typeref:typename:socklen_t
 un_status_code	ZT_ctx.h	/^    unsigned int un_status_code;$/;"	m	struct:_ResType	typeref:typename:unsigned int
 uri	ZT_ctx.h	/^    char uri[URI_MAX_LEN];$/;"	m	struct:_ReqType	typeref:typename:char[]
+user	ZT_chat.h	/^    user_t user;$/;"	m	struct:Session	typeref:typename:user_t
+user_pool	ZT_chat.c	/^int user_pool[USER_POOL_MAX_COUNT];$/;"	v	typeref:typename:int[]
+user_t	ZT_chat.h	/^} user_t;$/;"	t	typeref:struct:User
+user_type_e	ZT_chat.h	/^} user_type_e;$/;"	t	typeref:enum:__anonead279a80103
 value	ZT_ctx.h	/^    char value[VALUE_MAX_LEN];$/;"	m	struct:_HeaderType	typeref:typename:char[]
 version	ZT_ctx.h	/^    char version[VERSION_MAX_LEN];$/;"	m	struct:_ReqType	typeref:typename:char[]
 version	ZT_ctx.h	/^    char version[VERSION_MAX_LEN];$/;"	m	struct:_ResType	typeref:typename:char[]

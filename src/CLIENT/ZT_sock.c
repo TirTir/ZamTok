@@ -1,5 +1,6 @@
 #include "ZT_Inc.h"
 #include "ZT_sock.h"
+#include <stddef.h>
 
 int SET_NONBLOCKING(int socket)
 {
@@ -10,16 +11,22 @@ int SET_NONBLOCKING(int socket)
 		printf("[SET_NONBLOCKING] Socket is Wrong\n");
 		return ERR_ARG_INVALID;
 	}
+
 	flags = fcntl(socket, F_GETFL, 0);
+
 	if (flags < 0) {
-		printf("[SET_NONBLOCKING] Fcntl Get Fail\n");
+		printf("[SET_NONBLOCKING] fcntl Get Fail\n");
 		return ERR_NONBLOCKING;
 	}
+
+	/* file status flag setting */	
 	rc = fcntl(socket, F_SETFL, flags | O_NONBLOCK);
+	
 	if (rc < 0) {
-		printf("[SET_NONBLOCKING] Fcntl Nonblock Set Fail\n");
+		printf("[SET_NONBLOCKING] fcntl Nonblock Set Fail\n");
 		return ERR_NONBLOCKING;
 	}
+
 	return SOCKET_OK;
 }
 
@@ -103,6 +110,28 @@ int SOCKET_SendHttpRequest(int socket, const char *host, int port,
 	}
 	if (n != len) {
 		printf("[SOCKET_SendHttpRequest] Partial write\n");
+		return ERR_SOCKET_WRITE;
+	}
+
+	return SOCKET_OK;
+}
+
+int SOCKET_SendRequestBuf(int socket, const char *req_buf, size_t len)
+{
+	int n;
+
+	if (socket < 0 || req_buf == NULL) {
+		printf("[SOCKET_SendRequestBuf] Invalid argument\n");
+		return ERR_ARG_INVALID;
+	}
+
+	n = (int)write(socket, req_buf, len);
+	if (n < 0) {
+		printf("[SOCKET_SendRequestBuf] Write Fail <%d:%s>\n", errno, strerror(errno));
+		return ERR_SOCKET_WRITE;
+	}
+	if ((size_t)n != len) {
+		printf("[SOCKET_SendRequestBuf] Partial write\n");
 		return ERR_SOCKET_WRITE;
 	}
 

@@ -225,10 +225,11 @@ int HDL_SOCKET ( int epfd, int socket )
     return SOCKET_OK;
 }
 
-int HDL_ACCEPT( int socket )
+int HDL_ACCEPT( int socket, int epfd )
 {
 	struct sockaddr_in t_client_addr = {0};
     socklen_t un_socket_len = sizeof(t_client_addr);
+	struct epoll_event tEv;
 
     int rc = 0;
     int client_fd = -1;
@@ -240,16 +241,31 @@ int HDL_ACCEPT( int socket )
 		return ERR_SOCKET_ACCEPT;
 	}
 
+	printf("[HDL_ACCEPT] Client connected FD=%d from %s:%d\n",
+		client_fd, inet_ntoa(t_client_addr.sin_addr), ntohs(t_client_addr.sin_port));
+
     rc = CTX_Http_Insert( &gt_ctx_info, client_fd, t_client_addr ); 
     if( rc < 0 )
     {
         printf("[HDL_ACCEPT] Insert Client Info Fail\n");
+        close(client_fd);
         return ERR_CTX_INSERT;
     }
+
+	/* 클라이언트 소켓을 epoll에 등록 (데이터 수신 이벤트 수신 가능) */
+	SET_NONBLOCKING(client_fd);
+	tEv.events = EPOLLIN;
+	tEv.data.fd = client_fd;
+	rc = epoll_ctl( epfd, EPOLL_CTL_ADD, client_fd, &tEv );
+	if( rc < 0 )
+	{
+		printf("[HDL_ACCEPT] epoll_ctl Add Fail <%d:%s>\n", errno, strerror(errno));
+		close(client_fd);
+		return ERR_CTX_INSERT;
+	}
 	
 	/* FD pool에 클라이언트 등록 */
 	g_client_fd[client_fd/8] |= ( 1 << ( client_fd % 8 ));
-
 
 	return SOCKET_OK;
 }

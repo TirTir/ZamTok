@@ -217,8 +217,7 @@ int EventLoop ( int socket )
 			if( fd == socket )
 			{
 				/* New Clients Connection */
-						
-				rc = HDL_ACCEPT( socket );
+				rc = HDL_ACCEPT( socket, epfd );
 				if( rc < 0 )
 				{
 					printf("[EventLoop] HDL_ACCEPT fail\n");

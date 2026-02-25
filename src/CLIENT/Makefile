@@ -10,6 +10,7 @@ RB_RELEASE_DIR := $(MKFDIR)../release
 
 SRCS = ZT_main.c \
        ZT_ctx.c  \
+       ZT_chat.c \
        ZT_ctrl.c \
        ZT_evt.c  \
        ZT_hdl.c  \

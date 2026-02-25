@@ -2,7 +2,6 @@
 #include "ZT_ctx.h"
 #include "ZT_log.h"
 
-/* 각 %s에 최대 길이 제한하여 HEADER_MAX_LEN(256) 초과 방지 */
 #define HEADER_FMT "HTTP/%.15s %d %.63s\r\nContent-Length: %.63s\r\nContent-Type: %.63s\r\n\r\n"
 
 /*------------------------------------------------
@@ -144,6 +143,40 @@ int HDL_HEADER_MIME( char *p_content_type, int size, const char *p_uri )
 	}
 	else 
 		snprintf( p_content_type, size, "%s", "text/plain" );
+
+	return SOCKET_OK;
+}
+
+/*=================================================
+ * name : HDL_CLIENT_RECV
+ * return : SOCKET_OK / error
+ * param : socket - client socket
+ * note  : Client only - read and display HTTP response (not parse as request)
+ ===================================================*/
+int HDL_CLIENT_RECV(int socket)
+{
+	char buf[BUF_MAX_LEN] = {0};
+	int n;
+
+	if (socket < 0) {
+		printf("[HDL_CLIENT_RECV] Socket FD is Wrong\n");
+		return ERR_ARG_INVALID;
+	}
+
+	n = read(socket, buf, sizeof(buf) - 1);
+	if (n < 0 && (errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR)) {
+		return SOCKET_OK;
+	}
+	if (n <= 0) {
+		if (n == 0)
+			printf("[HDL_CLIENT_RECV] Connection closed\n");
+
+		return -1;
+	}
+
+	buf[n] = '\0';
+	printf("====================== Server Response ======================\n");
+	printf("%s\n", buf);
 
 	return SOCKET_OK;
 }

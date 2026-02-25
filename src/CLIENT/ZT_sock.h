@@ -8,5 +8,6 @@ int SOCKET_Init(int *pSocket);
 int SOCKET_Connect(int socket, const char *host, int port);
 int SOCKET_SendHttpRequest(int socket, const char *host, int port,
 	const char *method, const char *path);
+int SOCKET_SendRequestBuf(int socket, const char *req_buf, size_t len);
 
 #endif

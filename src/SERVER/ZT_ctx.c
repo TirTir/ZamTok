@@ -47,8 +47,20 @@ int CTX_Http_Insert( ZT_CTX_t *pt_ctx, const int client_fd, struct sockaddr_in t
         LOG_ERR("Mutex Lock Fail");
         return ERR_CTX_LOCK;
     }
-    
-    pt_ctx->pt_http_ctx->pt_next_ctx = pt_new_ctx;
+
+    if ( pt_ctx->pt_http_ctx == NULL )
+    {
+        /* First client: empty list */
+        pt_ctx->pt_http_ctx = pt_new_ctx;
+    }
+    else
+    {
+        /* Append to tail */
+        HttpCTX_t *pt_tail = pt_ctx->pt_http_ctx;
+        while ( pt_tail->pt_next_ctx != NULL )
+            pt_tail = pt_tail->pt_next_ctx;
+        pt_tail->pt_next_ctx = pt_new_ctx;
+    }
     pt_ctx->client_cnt++;
     
 close_mutex:

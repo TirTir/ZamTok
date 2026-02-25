@@ -2,6 +2,7 @@
 #include "ZT_ctx.h"
 #include "ZT_sock.h"
 #include "ZT_evt.h"
+#include "ZT_ctrl.h"
 
 ZT_CTX_t gt_ctx_info;
 unsigned char g_client_fd[MAX_CLIENTS/8];
@@ -39,9 +40,9 @@ int main(int argc, char **argv)
 		goto close_socket;
 	}
 
-	rc = SOCKET_SendHttpRequest(sockfd, host, port, "GET", "/");
+	rc = CTRL_start(sockfd);
 	if (rc < 0) {
-		printf("[ERROR] SOCKET_SendHttpRequest Fail\n");
+		printf("[ERROR] CTRL_start Fail\n");
 		goto close_socket;
 	}
 

@@ -1,7 +1,7 @@
 #ifndef _ZT_CTRL_H_
 #define _ZT_CTRL_H_
 
-#include "ZT_chat.h"
+#include "../common/ZT_chat.h"
 
 #define MAX_CMD_LEN  512
 #define MAX_ARGC     32

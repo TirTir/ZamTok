@@ -97,7 +97,7 @@ int SOCKET_SendHttpRequest(int socket, const char *host, int port,
 	}
 
 	len = snprintf(req_buf, sizeof(req_buf), HTTP_REQUEST_FMT,
-		method, path, host, "");
+		method, path, host, (size_t)0, "");
 	if (len < 0 || (size_t)len >= sizeof(req_buf)) {
 		printf("[SOCKET_SendHttpRequest] Request too long\n");
 		return ERR_ARG_INVALID;

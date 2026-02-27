@@ -228,7 +228,7 @@ int EventLoop ( int socket )
 			{		
 				if( tEvents[i].events & EPOLLIN )
 				{
-					rc = HDL_SOCKET ( epfd, socket );
+					rc = HDL_SOCKET ( epfd, fd );
 					if( rc < 0 )
 					{
 						printf("[EventLoop] HDL_SOCKET fail\n");

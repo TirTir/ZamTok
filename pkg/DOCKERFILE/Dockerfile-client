@@ -1,0 +1,10 @@
+FROM rockylinux:9
+
+WORKDIR /app
+
+COPY ../../src/release/CLIENT /app/client
+
+#RUN yum update -y
+RUN chmod +x /app/client
+
+CMD ["./CLIENT"]

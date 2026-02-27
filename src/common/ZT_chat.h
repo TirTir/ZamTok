@@ -3,8 +3,7 @@
 
 #define USER_ID_MAX_LEN 16
 #define USER_NAME_MAX_LEN 16
-#define PHONE_MAX_LEN 11
-#define EMAIL_MAX_LEN 64
+#define PASSWORD_MAX_LEN 16
 #define MESSAGE_MAX_LEN 256
 #define SESSION_ID_MAX_LEN 16
 #define USER_POOL_MAX_COUNT 64
@@ -17,7 +16,7 @@ typedef enum {
 typedef struct User {
     char str_user_id[USER_ID_MAX_LEN];
     char str_name[USER_NAME_MAX_LEN];
-    char str_email[EMAIL_MAX_LEN];
+    char str_pwd[PASSWORD_MAX_LEN];
 } user_t;
 
 typedef struct Message {
@@ -33,5 +32,6 @@ typedef struct Session {
 } session_t;
 
 int Join(int socket, const user_t *pt_user);
+int Login(int socket, const char *str_user_id, const char *str_password);
 
 #endif

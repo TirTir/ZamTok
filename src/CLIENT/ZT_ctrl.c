@@ -16,11 +16,12 @@ static int          g_socket_fd = -1;
 st_commands_t       gp_commands [] = {
 
     {"[common]",0,""},
-    {"help",0,"                                         : This Screen"},
-    {"signup",4,"  <user_id> <name> <phone> <email>     : User signup"},
-    {"history",0,"                                      : History"},
-    {"log",1,"     on/off                               : Log (default off)"},
-    {"quit",1,"                                         : Program quit"},
+    {"help",0,"This Screen"},
+    {"signup",3,"User signup"},
+    {"login",2,"User login"},
+    {"history",0,"History"},
+    {"log",1,"on/off : Log (default off)"},
+    {"quit",1,"Program quit"},
     {NULL, 0, NULL}
 };
 
@@ -41,9 +42,13 @@ void CTRL_proc(int argc, char **argv)
 			return;
 		}
 
+		if (argc < 4) {
+			printf("[signup] Usage: signup <user_id> <name> <password>\n");
+			return;
+		}
 		snprintf(t_user.str_user_id, sizeof(t_user.str_user_id), "%.15s", argv[1]);
 		snprintf(t_user.str_name, sizeof(t_user.str_name), "%.15s", argv[2]);
-		snprintf(t_user.str_email, sizeof(t_user.str_email), "%.63s", argv[3]);
+		snprintf(t_user.str_pwd, sizeof(t_user.str_pwd), "%.15s", argv[3]);
 
 		rc = Join(g_socket_fd, &t_user);
 		if (rc == 0)
@@ -51,18 +56,40 @@ void CTRL_proc(int argc, char **argv)
 		else
 			printf("[signup] Join send fail\n");
 		return;
-	} 
+	}
+
+	if (!strcasecmp(argv[0], "login"))
+	{
+		int rc;
+
+		if (g_socket_fd < 0) {
+			printf("[login] Socket not connected\n");
+			return;
+		}
+
+		if (argc < 3) {
+			printf("[login] Usage: login <user_id> <password>\n");
+			return;
+		}
+
+		rc = Login(g_socket_fd, argv[1], argv[2]);
+		if (rc == 0)
+			printf("[login] Login request sent\n");
+		else
+			printf("[login] Login send fail\n");
+		return;
+	}
 	
 	if (!strcasecmp(argv[0], "help")) 
 	{
 		int i = 0;
 		printf("================================================\n");
-		printf("Command\t\t Description\n");
+		printf("%-12s  %s\n", "Command", "Description");
 		printf("================================================\n");
 
 		while(gp_commands[i].name)
 		{
-			printf("%s\t\t%s\n", gp_commands[i].name, gp_commands[i].doc);
+			printf("%-12s  %s\n", gp_commands[i].name, gp_commands[i].doc);
 			i++;
 		}
 		return;
@@ -85,22 +112,19 @@ static int parse_cmd_line(char *line, char **argv, int max_argc)
 
     while (argc < max_argc)
 	{
-        while (*p == ' ' || *p == '\t') 
+        while (*p == ' ' || *p == '\t' || *p == '\n') 
 			*p++ = '\0';
 
-        if (!*p || *p == '\n') 
+        if (!*p) 
 			break;
 
 		argv[argc++] = p;
         
-		while (*p && *p != ' ' && *p != '\t' && *p != '\n') 
+		while (*p && *p != '\n') 
 			p++;
         
 		if (*p == '\n') 
-		{ 
-			*p = '\0'; 
-			break; 
-		}
+			*p++ = '\0';
     }
 
     return argc;
@@ -108,91 +132,67 @@ static int parse_cmd_line(char *line, char **argv, int max_argc)
 
 static void *CTRL_handler(void *ctx)
 {
-	struct epoll_event ev;
-	struct epoll_event t_ev[MAX_EVENTS];
 	static char line_buf[MAX_CMD_LEN];
-	static int line_len = 0;
-	
+	static char signup_buf[3][64];
+	static char login_buf[2][64];
 	char *argv[MAX_ARGC];
-	int nargs, n;
+	int nargs, i, need;
+	char *p;
 
-	int epfd = -1;
-	int i, rc = 0;
-
-	epfd = epoll_create1(0);
-	if (epfd < 0) {
-		printf("[CTRL_handler] epoll_create Fail\n");
-		return (void *)(intptr_t)ERR_EPOLL_CREATE;
-	}
-
-	rc = SET_NONBLOCKING(STDIN_FILENO);
-	if (rc == 0) 
-	{
-		ev.events = EPOLLIN;
-		ev.data.fd = STDIN_FILENO;
-
-		/* stdin registed */
-		rc = epoll_ctl(epfd, EPOLL_CTL_ADD, STDIN_FILENO, &ev);
-	}
+	(void)ctx;
 
 	while (1) 
 	{
-		n = epoll_wait(epfd, t_ev, MAX_EVENTS, -1);
-		if (n < 0) 
-		{
-			if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
-				continue;
+		printf("> ");
+		fflush(stdout);
 
-			printf("[EventLoop] epoll_wait Fail\n");
-			goto close_event;
-		}
+		if (!fgets(line_buf, sizeof(line_buf), stdin))
+			break;
 
-		for (i = 0; i < n; i++)
+		nargs = parse_cmd_line(line_buf, argv, MAX_ARGC);
+		if (nargs < 1)
+			continue;
+
+		if (!strcasecmp(argv[0], "signup") && nargs < 4)
 		{
-			if(t_ev[i].data.fd == STDIN_FILENO)
+			const char *prompts[] = {"user_id: ", "name: ", "password: "};
+			need = 4 - nargs;
+
+			for (i = 0; i < need && nargs < 4; i++)
 			{
-				while(1)
-				{
-					rc = read(STDIN_FILENO, line_buf, sizeof(line_buf) - line_len - 1);
-					if(rc <= 0)
-					{
-						if(errno == EAGAIN)
-							break;
-
-						goto close_event;
-					}
-
-					line_len += rc;
-					line_buf[line_len] = '\0';
-
-					if(strchr(line_buf, '\n'))
-					{
-						nargs = parse_cmd_line(line_buf, argv, MAX_ARGC);
-
-						if(nargs >= 0)
-						{
-							/* cmd process */
-							CTRL_proc(nargs, argv);
-						}
-
-						/* initial len size */
-						line_len = 0;
-					}
-
-				}
+				printf("%s", prompts[nargs - 1]);
+				fflush(stdout);
+				if (!fgets(signup_buf[i], sizeof(signup_buf[i]), stdin))
+					break;
+				p = strchr(signup_buf[i], '\n');
+				if (p) *p = '\0';
+				argv[nargs] = signup_buf[i];
+				nargs++;
 			}
-
 		}
+
+		if (!strcasecmp(argv[0], "login") && nargs < 3)
+		{
+			const char *prompts[] = {"user_id: ", "password: "};
+			need = 3 - nargs;
+
+			for (i = 0; i < need && nargs < 3; i++)
+			{
+				printf("%s", prompts[nargs - 1]);
+				fflush(stdout);
+				if (!fgets(login_buf[i], sizeof(login_buf[i]), stdin))
+					break;
+				p = strchr(login_buf[i], '\n');
+				if (p) *p = '\0';
+				argv[nargs] = login_buf[i];
+				nargs++;
+			}
+		}
+
+		CTRL_proc(nargs, argv);
 	}
 
 	return NULL;
-
-close_event:
-
-	if (epfd >= 0)
-		close(epfd);
-	
-	return (void *)(intptr_t)-1;
 }
 
 int CTRL_start(int socket)

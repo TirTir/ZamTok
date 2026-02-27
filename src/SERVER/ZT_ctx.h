@@ -95,7 +95,8 @@ typedef struct _ZT_CTX {
 
 #define RETRY_MAX_CNT 3
 #define MAX_STATUS_MSG_LEN 64
-#define HEADER_FMT "HTTP/%s %d %s\r\nContent-Length: %s\r\nContent-Type: %s\r\n\r\n"
+
+#define HEADER_FMT "HTTP/%.15s %d %.63s\r\nContent-Length: %.31s\r\nContent-Type: %.63s\r\n\r\n"
 
 int CTX_Init( ZT_CTX_t *pt_ctx );
 int CTX_Http_Insert( ZT_CTX_t *pt_ctx, const int client_fd, struct sockaddr_in t_cient_addr );

@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-client
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: test-client
+  template:
+    metadata:
+      labels:
+        app: test-client
+    spec:
+      containers:
+        - name: client
+          image: test-client:1.0
+          imagePullPolicy: Never
+          command: ["./client"]
+          args: ["128.0.0.1", "9000"]
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVER_HOST
+              value: client-service
+            - name: SERVER_PORT
+              value: "9000"			

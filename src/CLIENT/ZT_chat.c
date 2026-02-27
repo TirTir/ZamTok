@@ -11,11 +11,11 @@ int Join(int socket, const user_t *pt_user)
 	char json_body[512] = {0};
 
 	snprintf(json_body, sizeof(json_body),
-		"{\"user_id\": \"%s\", \"name\": \"%s\", \"email\": \"%s\"}",
-		pt_user->str_user_id, pt_user->str_name, pt_user->str_email);
+		"{\"user_id\": \"%s\", \"name\": \"%s\", \"password\": \"%s\"}",
+		pt_user->str_user_id, pt_user->str_name, pt_user->str_pwd);
 
 	len = snprintf(req_buf, sizeof(req_buf), HTTP_REQUEST_FMT,
-		"POST", "/join", "localhost:8080", json_body);
+		"POST", "/join", "localhost:8080", strlen(json_body), json_body);
 
 	if (len <= 0 )
 	{
@@ -37,7 +37,7 @@ int Login(int socket, const char *str_user_id, const char *str_password)
 		str_user_id, str_password);
 
 	len = snprintf(req_buf, sizeof(req_buf), HTTP_REQUEST_FMT,
-		"POST", "/login", "localhost:8080", json_body);
+		"POST", "/login", "localhost:8080", strlen(json_body), json_body);
 
 	if (len <= 0 || (size_t)len >= sizeof(req_buf)) {
 		printf("[Login] Request build fail\n");

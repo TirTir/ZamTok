@@ -51,7 +51,8 @@ int SOCKET_Init(int *pSocket)
 
 int SOCKET_Connect(int socket, const char *host, int port)
 {
-	struct sockaddr_in sin;
+	struct addrinfo hints, *res, *rp;
+	char port_str[8];
 	int rc;
 
 	if (socket < 0) {
@@ -67,22 +68,33 @@ int SOCKET_Connect(int socket, const char *host, int port)
 		return ERR_ARG_INVALID;
 	}
 
-	memset(&sin, 0, sizeof(sin));
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons((unsigned short)port);
+	snprintf(port_str, sizeof(port_str), "%d", port);
 
-	if (inet_pton(AF_INET, host, &sin.sin_addr) <= 0) {
-		printf("[SOCKET_Connect] Invalid address: %s\n", host);
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family   = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+
+	rc = getaddrinfo(host, port_str, &hints, &res);
+	if (rc != 0) {
+		printf("[SOCKET_Connect] DNS Resolution Fail <%s>: %s\n", host, gai_strerror(rc));
 		return ERR_SOCKET_CONNECT;
 	}
 
-	rc = connect(socket, (struct sockaddr *)&sin, sizeof(sin));
-	if (rc < 0) {
+	rc = ERR_SOCKET_CONNECT;
+	for (rp = res; rp != NULL; rp = rp->ai_next) {
+		if (connect(socket, rp->ai_addr, rp->ai_addrlen) == 0) {
+			rc = SOCKET_OK;
+			break;
+		}
+	}
+
+	freeaddrinfo(res);
+
+	if (rc != SOCKET_OK) {
 		printf("[SOCKET_Connect] Connect Fail <%d:%s>\n", errno, strerror(errno));
-		return ERR_SOCKET_CONNECT;
 	}
 
-	return SOCKET_OK;
+	return rc;
 }
 
 int SOCKET_SendHttpRequest(int socket, const char *host, int port,

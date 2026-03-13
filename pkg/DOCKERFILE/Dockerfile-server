@@ -1,0 +1,9 @@
+FROM rockylinux:9
+
+WORKDIR /app
+
+COPY SERVER /app/server
+
+RUN chmod +x /app/server
+
+CMD ["./server"]

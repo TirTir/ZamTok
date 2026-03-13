@@ -15,13 +15,8 @@ spec:
       containers:
         - name: client
           image: test-client:1.0
-          imagePullPolicy: Never
+          imagePullPolicy: Always
           command: ["./client"]
-          args: ["128.0.0.1", "9000"]
+          args: ["test-server-service", "9000"]
           ports:
-            - containerPort: 8080
-          env:
-            - name: SERVER_HOST
-              value: client-service
-            - name: SERVER_PORT
-              value: "9000"			
+            - containerPort: 9000

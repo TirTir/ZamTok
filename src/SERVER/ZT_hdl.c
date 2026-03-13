@@ -155,7 +155,7 @@ static int HDL_Login( int socket, const char *buf, ReqType_t *t_msg )
 		return ERR_ARG_INVALID;
 
 	/* POST 메소드 확인 */
-	if( strncmp( t_msg->method, "POST" ) )
+	if( strncmp( t_msg->method, "POST", 4 ) )
 	{
 		snprintf( res_buf, sizeof(res_buf),
 			"HTTP/1.1 405 Method Not Allowed\r\n"

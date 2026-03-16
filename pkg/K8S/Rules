@@ -1,0 +1,11 @@
+/* Pod apply */
+kubectl apply -f <yaml>
+
+/* Reload */
+kubectl delete pod <Pod>
+
+/* Shell */
+kubectl exec -it <Pod> -- /bin/sh
+
+/* Pod Spec */
+kubectl describe pod <Pod>

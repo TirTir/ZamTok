@@ -4,8 +4,9 @@ kubectl apply -f <yaml>
 /* Pod delete */
 kubectl delete pod <Pod>
 
-/* Pod Reload */
+/* Pod restart Image Update 제외 */
 kubectl rollout restart statefulset test-client
+kubectl rollout restart statefulset test-server
 
 /* Shell */
 kubectl exec -it <Pod> -- /bin/sh

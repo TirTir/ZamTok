@@ -3,8 +3,6 @@
 #include "ZT_log_fmt.h"
 #include "ZT_hdl.h"
 
-extern g_nClients[MAX_CLIENTS];
-
 int SET_NONBLOCKING (int socket )
 {
 	int flags = -1;
@@ -110,11 +108,11 @@ int SOCKET_Init ( int *pSocket )
 int SOCKET_Accept ( int socket, int epfd )
 {
 	struct sockaddr_in tClientAddr;
-	
+	socklen_t addrlen = sizeof(tClientAddr);
 	struct epoll_event tEv;
 
-	int nClientFD = -1; 
-    int rc = 0;
+	int nClientFD = -1;
+	int rc = 0;
 
 	if ( socket < 0 )
 	{
@@ -127,11 +125,11 @@ int SOCKET_Accept ( int socket, int epfd )
 		LOG_MSG("[SOCKET_Accept] Epoll FD is Wrong\n");
 		return ERR_ARG_INVALID;
 	}
-	
-	while(( nClientFD = accept( socket, NULL, NULL )) > 0 )
+
+	while ( (nClientFD = accept( socket, (struct sockaddr *)&tClientAddr, &addrlen )) > 0 )
 	{
-        LOG_FMT_CENTER("Connecting");
-	    LOG_MSG("FD=%d from %s:%d\n", nClientFD, inet_ntoa(tClientAddr.sin_addr), ntohs(tClientAddr.sin_port));
+		LOG_FMT_CENTER("Connecting");
+		LOG_MSG("FD=%d from %s:%d\n", nClientFD, inet_ntoa(tClientAddr.sin_addr), ntohs(tClientAddr.sin_port));
 
 		/* Edge Trigger */
 		/* Client Socket Event ADD */
@@ -158,8 +156,8 @@ int EventLoop ( int socket )
 	/* tEv: fd 단일 등록 -> epoll_ctl()
 	   tEvs: fd에서 발생한 이벤트들 -> epoll_wait() */
 	struct epoll_event tEv, tEvents[MAX_EVENTS];
-	
-	int fd, epfd;
+
+	int fd = -1, epfd;
 	int i, n, rc = 0;
 
 	if ( socket < 0 )
@@ -200,7 +198,7 @@ int EventLoop ( int socket )
 
 	while(1)
 	{
-		n = epoll_wait( epfd, tEvents, MAX_CLIENTS, -1 );
+		n = epoll_wait( epfd, tEvents, MAX_EVENTS, -1 );
 		if( n < 0 )
 		{
 			if( errno == EINTR )
@@ -244,6 +242,7 @@ int EventLoop ( int socket )
 	return SOCKET_OK;
 
 close_event:
-	close(fd);
+	if ( fd >= 0 )
+		close(fd);
 	return ERR_EVENTLOOP;
 }

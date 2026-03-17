@@ -1,4 +1,6 @@
 #include "ZT_Inc.h"
+#include "ZT_log.h"
+#include "ZT_log_fmt.h"
 #include "ZT_hdl.h"
 
 extern g_nClients[MAX_CLIENTS];
@@ -10,7 +12,7 @@ int SET_NONBLOCKING (int socket )
 
 	if( socket < 0 )
 	{
-		printf("[SET_NONBLOCKING] Socket is Wrong\n");
+		LOG_MSG("[SET_NONBLOCKING] Socket is Wrong\n");
 		return ERR_ARG_INVALID;
 	}
 
@@ -18,14 +20,14 @@ int SET_NONBLOCKING (int socket )
 	flags = fcntl( socket, F_GETFL, 0 );
 	if( flags < 0 )
 	{
-		printf("[SET_NONBLOCKING] Fnctl Get Fail\n");
+		LOG_MSG("[SET_NONBLOCKING] Fnctl Get Fail\n");
 		return ERR_NONBLOCKING;
 	}
 
 	rc = fcntl( socket, F_SETFL, flags | O_NONBLOCK );
 	if( rc < 0 )
 	{
-		printf("[SET_NONBLOCKING] Fnctl Nonblock Set Fail\n");
+		LOG_MSG("[SET_NONBLOCKING] Fnctl Nonblock Set Fail\n");
 		return ERR_NONBLOCKING;
 	}
 
@@ -39,13 +41,13 @@ int SOCKET_Bind ( int socket, int port )
 
 	if( socket < 0 )
 	{
-		printf("[SOCKET_Bind] Socket is Wrong\n");
+		LOG_MSG("[SOCKET_Bind] Socket is Wrong\n");
 		return ERR_ARG_INVALID;
 	}
 
 	if( port < 0 )
 	{
-		printf("[SOCKET_Bind] Port is Wrong\n");
+		LOG_MSG("[SOCKET_Bind] Port is Wrong\n");
 		return ERR_ARG_INVALID;
 	}
 
@@ -56,14 +58,14 @@ int SOCKET_Bind ( int socket, int port )
 	rc = bind( socket, (struct sockaddr *)&sin, sizeof(sin));
 	if( rc < 0 )
 	{
-		printf("[SOCKET_Bind] Socket Bind Fail <%d:%s>\n", errno, strerror(errno));
+		LOG_MSG("[SOCKET_Bind] Socket Bind Fail <%d:%s>\n", errno, strerror(errno));
  		return ERR_SOCKET_BIND;
 	}
 	
 	rc = listen( socket, MAX_CLIENTS );
 	if( rc < 0 )
 	{
-		printf("[SOCKET_Bind] Socket listen Fail <%d:%s>\n", errno, strerror(errno));
+		LOG_MSG("[SOCKET_Bind] Socket listen Fail <%d:%s>\n", errno, strerror(errno));
  		return ERR_SOCKET_LISTEN;
 	}
 
@@ -78,7 +80,7 @@ int SOCKET_Init ( int *pSocket )
 	
 	if( pSocket == NULL )
 	{
-		printf("[SOCKET_Init] Socket is NULL\n");
+		LOG_MSG("[SOCKET_Init] Socket is NULL\n");
 	}
 
 	/* 
@@ -88,14 +90,14 @@ int SOCKET_Init ( int *pSocket )
 	fd = socket( AF_INET, SOCK_STREAM, 0 );
 	if( fd < 0 )
 	{
-		printf("[SOCKET_Init] Socket Create Fail <%d:%s>\n", errno, strerror(errno));
+		LOG_MSG("[SOCKET_Init] Socket Create Fail <%d:%s>\n", errno, strerror(errno));
 		return ERR_SOCKET_CREATE;
 	}
 
 	rc = setsockopt( fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int) );
 	if( rc < 0 )
 	{
-		printf("[SOCKET_Init] Socket Set Opt Fail <%d:%s>\n", errno, strerror(errno));
+		LOG_MSG("[SOCKET_Init] Socket Set Opt Fail <%d:%s>\n", errno, strerror(errno));
 		return ERR_SOCKET_INIT;
 	}
 
@@ -116,20 +118,20 @@ int SOCKET_Accept ( int socket, int epfd )
 
 	if ( socket < 0 )
 	{
-		printf("[SOCKET_Accept] Socket FD is Wrong\n");
+		LOG_MSG("[SOCKET_Accept] Socket FD is Wrong\n");
 		return ERR_ARG_INVALID;
 	}
 
 	if ( epfd < 0 )
 	{
-		printf("[SOCKET_Accept] Epoll FD is Wrong\n");
+		LOG_MSG("[SOCKET_Accept] Epoll FD is Wrong\n");
 		return ERR_ARG_INVALID;
 	}
 	
 	while(( nClientFD = accept( socket, NULL, NULL )) > 0 )
 	{
-        printf("======================= Connecting =======================\n");
-	    printf("FD=%d from %s:%d\n", nClientFD, inet_ntoa(tClientAddr.sin_addr), ntohs(tClientAddr.sin_port));
+        LOG_FMT_CENTER("Connecting");
+	    LOG_MSG("FD=%d from %s:%d\n", nClientFD, inet_ntoa(tClientAddr.sin_addr), ntohs(tClientAddr.sin_port));
 
 		/* Edge Trigger */
 		/* Client Socket Event ADD */
@@ -144,7 +146,7 @@ int SOCKET_Accept ( int socket, int epfd )
 
 	if( rc < 0 || nClientFD < 0 || ( errno != EAGAIN && errno != EWOULDBLOCK ))
 	{
-		printf("[SOCKET_Accept] Socket Accept Fail <%d:%s>\n", errno, strerror(errno));
+		LOG_MSG("[SOCKET_Accept] Socket Accept Fail <%d:%s>\n", errno, strerror(errno));
 		return ERR_SOCKET_ACCEPT;
 	}
 
@@ -162,7 +164,7 @@ int EventLoop ( int socket )
 
 	if ( socket < 0 )
 	{
-		printf("[EventLoop] Socket FD is Wrong\n");
+		LOG_MSG("[EventLoop] Socket FD is Wrong\n");
 		return ERR_ARG_INVALID;
 	}
 
@@ -171,7 +173,7 @@ int EventLoop ( int socket )
 	epfd = epoll_create1(0);
 	if( epfd < 0 )
 	{
-		printf("[EventLoop] Epoll Create Fail\n");
+		LOG_MSG("[EventLoop] Epoll Create Fail\n");
 		return ERR_EPOLL_CREATE;
 	}
 
@@ -183,18 +185,18 @@ int EventLoop ( int socket )
 	rc = epoll_ctl( epfd, EPOLL_CTL_ADD, socket, &tEv );
 	if( rc < 0 )
 	{
-		printf("[EventLoop] Epoll Control Fail\n");
+		LOG_MSG("[EventLoop] Epoll Control Fail\n");
 		goto close_event;
 	}
 
 	rc = SET_NONBLOCKING( socket );
 	if( rc < 0 )
 	{
-		printf("[EventLoop] Set Nonblocking Fail\n");
+		LOG_MSG("[EventLoop] Set Nonblocking Fail\n");
 		goto close_event;
 	}
 
-	printf("======================= Waiting Connecting =======================\n");
+	LOG_FMT_CENTER("Waiting Connecting");
 
 	while(1)
 	{
@@ -205,7 +207,7 @@ int EventLoop ( int socket )
 				continue;
 			else
 			{
-				printf("EventLoop] Epoll Wait Fail\n");
+				LOG_MSG("[EventLoop] Epoll Wait Fail\n");
 				goto close_event;
 			}
         }
@@ -220,7 +222,7 @@ int EventLoop ( int socket )
 				rc = HDL_ACCEPT( socket, epfd );
 				if( rc < 0 )
 				{
-					printf("[EventLoop] HDL_ACCEPT fail\n");
+					LOG_MSG("[EventLoop] HDL_ACCEPT fail\n");
 					goto close_event;
 				}
 			}
@@ -231,7 +233,7 @@ int EventLoop ( int socket )
 					rc = HDL_SOCKET ( epfd, fd );
 					if( rc < 0 )
 					{
-						printf("[EventLoop] HDL_SOCKET fail\n");
+						LOG_MSG("[EventLoop] HDL_SOCKET fail\n");
 						goto close_event;
 					}
 				}

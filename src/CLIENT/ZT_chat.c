@@ -46,3 +46,24 @@ int Login(int socket, const char *str_user_id, const char *str_password)
 
 	return SOCKET_SendRequestBuf(socket, req_buf, (size_t)len);
 }
+
+int CreateRoom(int socket, const char *str_room_id, const char *str_password)
+{
+	int len = 0;
+	char req_buf[1024] = {0};
+	char json_body[256] = {0};
+
+	snprintf(json_body, sizeof(json_body),
+		"{\"room_id\": \"%s\", \"password\": \"%s\"}",
+		str_room_id, str_password);
+
+	len = snprintf(req_buf, sizeof(req_buf), HTTP_REQUEST_FMT,
+		"POST", "/room", "localhost:8080", strlen(json_body), json_body);
+
+	if (len <= 0 || (size_t)len >= sizeof(req_buf)) {
+		printf("[CreateRoom] Request build fail\n");
+		return -1;
+	}
+
+	return SOCKET_SendRequestBuf(socket, req_buf, (size_t)len);
+}

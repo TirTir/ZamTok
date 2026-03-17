@@ -1,8 +1,11 @@
 /* Pod apply */
 kubectl apply -f <yaml>
 
-/* Reload */
+/* Pod delete */
 kubectl delete pod <Pod>
+
+/* Pod Reload */
+kubectl rollout restart statefulset test-client
 
 /* Shell */
 kubectl exec -it <Pod> -- /bin/sh

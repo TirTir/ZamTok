@@ -16,6 +16,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Debug paths
+        run: |
+          echo "== pwd =="
+          pwd
+          echo
+          echo "== ls -la (repo root) =="
+          ls -la
+          echo
+          echo "== ls -la src =="
+          ls -la src || true
+          echo
+          echo "== ls -la release =="
+          ls -la release || true
+          echo
+          echo "== ls -la src/release =="
+          ls -la src/release || true
+          echo
+          echo "== find-like check (no find): =="
+          echo "repo root Dockerfiles:"
+          ls -la Dockerfile* 2>/dev/null || true
+          echo "release Dockerfiles:"
+          ls -la release/Dockerfile* 2>/dev/null || true
+          echo "src/release Dockerfiles:"
+          ls -la src/release/Dockerfile* 2>/dev/null || true
+
       - name: Install build dependencies
         run: |
           sudo apt-get update

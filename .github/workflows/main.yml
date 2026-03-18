@@ -1,0 +1,64 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: ["feature/01/10"]
+  pull_request:
+    branches: ["feature/01/10"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # C 빌드 의존성 (서버는 hiredis 필요)
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc make libhiredis-dev
+
+      # 클라이언트 빌드 → release/CLIENT
+      - name: Build client
+        run: make -C CLIENT rb
+
+      # 서버 빌드 → release/SERVER
+      - name: Build server
+        run: make -C SERVER rb
+
+      # 컨텍스트 루트에 바이너리 파일 준비
+      - name: Prepare binaries for Docker
+        run: |
+          cp release/CLIENT CLIENT
+          cp release/SERVER SERVER
+
+      # Docker Hub 로그인
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 클라이언트 이미지 빌드 및 푸시
+      - name: Build and push client image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: release/Dockerfile-client
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/zamtok-client:latest
+            ${{ secrets.DOCKER_USERNAME }}/zamtok-client:${{ github.sha }}
+
+      # 서버 이미지 빌드 및 푸시
+      - name: Build and push server image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: release/Dockerfile-server
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/zamtok-server:latest
+            ${{ secrets.DOCKER_USERNAME }}/zamtok-server:${{ github.sha }}

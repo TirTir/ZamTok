@@ -13,3 +13,7 @@ kubectl exec -it <Pod> -- /bin/sh
 
 /* Pod Spec */
 kubectl describe pod <Pod>
+
+/* Configmap */
+kubectl get configmap
+kubectl apply -f configmap.yaml

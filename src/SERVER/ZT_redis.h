@@ -30,4 +30,7 @@ int ZT_REDIS_RoomSave(const room_t *pt_room);
 /** 채팅방 조회: 없으면 -1, 있으면 0. 조회 결과는 out_room에 채워 반환 */
 int ZT_REDIS_RoomGet(const char *room_id, room_t *out_room);
 
+/** 채팅방 목록 조회: 최대 max_rooms개까지 room_id만 채워서 반환, 리턴값은 실제 개수 (음수는 에러) */
+int ZT_REDIS_RoomList(room_t *out_rooms, size_t max_rooms);
+
 #endif

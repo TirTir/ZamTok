@@ -14,6 +14,7 @@
 char                gstr_read_line [128] = {'\0',};
 extern int          gi_pcap_open;
 static int          g_socket_fd = -1;
+static char         g_login_user_id[USER_ID_MAX_LEN] = {0};
 
 st_commands_t       gp_commands [] = {
 
@@ -22,6 +23,7 @@ st_commands_t       gp_commands [] = {
     {"signup",3,"User signup"},
     {"login",2,"User login"},
     {"create",2,"Create room (id, pw)"},
+    {"list",0,"Show room list"},
     {"history",0,"History"},
     {"log",1,"on/off : Log (default off)"},
     {"quit",1,"Program quit"},
@@ -76,10 +78,12 @@ void CTRL_proc(int argc, char **argv)
 		}
 
 		rc = Login(g_socket_fd, argv[1], argv[2]);
-		if (rc == 0)
+		if (rc == 0) {
 			LOG_MSG("[login] Login request sent\n");
-		else
+			snprintf(g_login_user_id, sizeof(g_login_user_id), "%.15s", argv[1]);
+		} else {
 			LOG_MSG("[login] Login send fail\n");
+		}
 		return;
 	}
 
@@ -92,16 +96,38 @@ void CTRL_proc(int argc, char **argv)
 			return;
 		}
 
+		if (g_login_user_id[0] == '\0') {
+			LOG_MSG("[create] Please login first\n");
+			return;
+		}
+
 		if (argc < 3) {
 			LOG_MSG("[create] Usage: create <room_id> <password>\n");
 			return;
 		}
 
-		rc = CreateRoom(g_socket_fd, argv[1], argv[2]);
+		rc = CreateRoom(g_socket_fd, argv[1], argv[2], g_login_user_id);
 		if (rc == 0)
 			LOG_MSG("[create] Create room request sent\n");
 		else
 			LOG_MSG("[create] Create room send fail\n");
+		return;
+	}
+
+	if (!strcasecmp(argv[0], "list"))
+	{
+		int rc;
+
+		if (g_socket_fd < 0) {
+			LOG_MSG("[list] Socket not connected\n");
+			return;
+		}
+
+		rc = ListRooms(g_socket_fd);
+		if (rc == 0)
+			LOG_MSG("[list] Room list request sent\n");
+		else
+			LOG_MSG("[list] Room list send fail\n");
 		return;
 	}
 	

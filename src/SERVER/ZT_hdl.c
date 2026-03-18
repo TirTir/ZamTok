@@ -23,6 +23,7 @@ static int HDL_Login( int socket, const char *buf, ReqType_t *t_msg );
 static int HDL_CreateRoom( int socket, const char *buf, ReqType_t *t_msg );
 static int HDL_SearchRoom( int socket, const char *buf, ReqType_t *t_msg );
 static int HDL_JoinRoom( int socket, const char *buf, ReqType_t *t_msg );
+static int HDL_ListRooms( int socket, const char *buf, ReqType_t *t_msg );
 
 
 /*=================================================
@@ -493,6 +494,67 @@ static int HDL_JoinRoom( int socket, const char *buf, ReqType_t *t_msg )
 }
 
 /*=================================================
+ * name : HDL_ListRooms
+ * return : SOCKET_OK / ERR_*
+ * param : socket, buf(전체 HTTP 요청), t_msg
+ * desc  : GET /rooms
+ *         Redis에서 room:* 키를 스캔해서 room_id, creator_id(user_id) 리스트 반환
+ *         {"result":"ok","rooms":[{"room_id":"r1","user_id":"u1"},...]}
+ * ===================================================*/
+static int HDL_ListRooms( int socket, const char *buf, ReqType_t *t_msg )
+{
+	room_t rooms[64] = {0};
+	char res_buf[BUF_MAX_LEN] = {0};
+	char json_body[1024] = {0};
+	int rc;
+	int i, n;
+
+	(void)buf;
+
+	if ( socket < 0 || t_msg == NULL )
+		return ERR_ARG_INVALID;
+
+	if ( strncmp( t_msg->method, "GET", 3 ) )
+	{
+		snprintf( res_buf, sizeof(res_buf),
+			"HTTP/1.1 405 Method Not Allowed\r\n"
+			"Content-Type: application/json\r\n"
+			"Content-Length: 34\r\n\r\n"
+			"{\"result\":\"fail\",\"reason\":\"GET only\"}" );
+		rc = write( socket, res_buf, strlen(res_buf) );
+		return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
+	}
+
+	n = ZT_REDIS_RoomList( rooms, (size_t)(sizeof(rooms)/sizeof(rooms[0])) );
+	if ( n < 0 )
+	{
+		snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"server error\"}" );
+	}
+	else
+	{
+		int len = 0;
+		len += snprintf( json_body + len, sizeof(json_body) - len, "{\"result\":\"ok\",\"rooms\":[");
+		for ( i = 0; i < n && len < (int)sizeof(json_body) - 1; i++ )
+		{
+			len += snprintf( json_body + len, sizeof(json_body) - len,
+				"%s{\"room_id\":\"%s\",\"user_id\":\"%s\"}",
+				(i == 0 ? "" : ","),
+				rooms[i].str_room_id,
+				rooms[i].str_creator_id );
+		}
+		len += snprintf( json_body + len, sizeof(json_body) - len, "]}" );
+	}
+
+	snprintf( res_buf, sizeof(res_buf),
+		"HTTP/1.1 200 OK\r\n"
+		"Content-Type: application/json\r\n"
+		"Content-Length: %d\r\n\r\n%s",
+		(int)strlen(json_body), json_body );
+	rc = write( socket, res_buf, strlen(res_buf) );
+	return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
+}
+
+/*=================================================
  * name : HDL_SOCKET
  * return :
  * param :
@@ -598,6 +660,15 @@ int HDL_SOCKET ( int epfd, int socket )
 		if ( !strcmp( t_msg.uri, "/room/join" ) && !strncmp( t_msg.method, "POST", 4 ) )
 		{
 			rc = HDL_JoinRoom( socket, buf, &t_msg );
+			if ( rc < 0 )
+				return ERR_SOCKET_WRITE;
+			break;
+		}
+
+		/* API 라우팅: GET /rooms → 채팅방 목록 조회 */
+		if ( !strcmp( t_msg.uri, "/rooms" ) && !strncmp( t_msg.method, "GET", 3 ) )
+		{
+			rc = HDL_ListRooms( socket, buf, &t_msg );
 			if ( rc < 0 )
 				return ERR_SOCKET_WRITE;
 			break;

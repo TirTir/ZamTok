@@ -18,11 +18,9 @@ spec:
           imagePullPolicy: IfNotPresent
           command: ["./server"]
           args: ["9000"]
-          env:
-            - name: REDIS_HOST
-              value: "redis-service"
-            - name: REDIS_PORT
-              value: "6379"
+          envFrom:
+            - configMapRef:
+                name: server-config
           ports:
             - containerPort: 9000
 ---

@@ -42,6 +42,7 @@ void ZT_REDIS_Disconnect(void)
 
 #define USER_KEY_FMT "user:%s"
 #define ROOM_KEY_FMT "room:%s"
+#define ROOM_KEY_PATTERN "room:*"
 
 int ZT_REDIS_UserSave(const user_t *pt_user)
 {
@@ -195,4 +196,65 @@ int ZT_REDIS_RoomGet(const char *room_id, room_t *out_room)
 	LOG_INFO("[ZT_REDIS] room get: %s, pwd: %s, creator_id: %s\n", room_id, out_room->str_pwd, out_room->str_creator_id);
 	freeReplyObject(reply);
 	return 0;
+}
+
+int ZT_REDIS_RoomList(room_t *out_rooms, size_t max_rooms)
+{
+	redisReply *reply = NULL;
+	size_t count = 0;
+	char cursor[32] = "0";
+
+	if (g_redis == NULL || out_rooms == NULL || max_rooms == 0)
+		return -2;
+
+	do {
+		reply = redisCommand(g_redis, "SCAN %s MATCH " ROOM_KEY_PATTERN " COUNT 50", cursor);
+		if (reply == NULL || reply->type != REDIS_REPLY_ARRAY || reply->elements < 2) {
+			if (reply) freeReplyObject(reply);
+			return -2;
+		}
+
+		/* 다음 커서 */
+		snprintf(cursor, sizeof(cursor), "%s", reply->element[0]->str ? reply->element[0]->str : "0");
+
+		/* 키 리스트 */
+		redisReply *keys = reply->element[1];
+		if (keys->type == REDIS_REPLY_ARRAY) {
+			for (size_t i = 0; i < keys->elements && count < max_rooms; i++) {
+				const char *key = keys->element[i]->str;
+				const char *p = NULL;
+				redisReply *hreply = NULL;
+
+				if (!key) continue;
+
+				p = strchr(key, ':');
+				if (!p || *(p + 1) == '\0')
+					continue;
+
+				memset(&out_rooms[count], 0, sizeof(room_t));
+				snprintf(out_rooms[count].str_room_id, sizeof(out_rooms[count].str_room_id), "%s", p + 1);
+
+				/* 각 방의 creator_id 조회 */
+				hreply = redisCommand(g_redis, "HGET %s creator_id", key);
+				if (hreply && hreply->type == REDIS_REPLY_STRING && hreply->str) {
+					snprintf(out_rooms[count].str_creator_id,
+					         sizeof(out_rooms[count].str_creator_id),
+					         "%s", hreply->str);
+				}
+				if (hreply) {
+					freeReplyObject(hreply);
+					hreply = NULL;
+				}
+
+				count++;
+			}
+		}
+
+		freeReplyObject(reply);
+		reply = NULL;
+
+	} while (cursor[0] != '0' && count < max_rooms);
+
+	LOG_INFO("[ZT_REDIS] room list count: %zu\n", count);
+	return (int)count;
 }

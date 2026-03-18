@@ -1,47 +1,57 @@
 name: Docker Image CI
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
     branches: ["main"]
   pull_request:
     branches: ["main"]
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc make libhiredis-dev
+
       - name: Build client
         run: make -C src/CLIENT rb
+
       - name: Build server
         run: make -C src/SERVER rb
+
       - name: Prepare binaries for Docker
         run: |
           cp src/release/CLIENT src/CLIENT
           cp src/release/SERVER src/SERVER
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Build and push client image
         uses: docker/build-push-action@v6
         with:
-          context: src
+          context: .
           file: src/release/Dockerfile-client
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/zamtok-client:latest
             ${{ secrets.DOCKER_USERNAME }}/zamtok-client:${{ github.sha }}
+
       - name: Build and push server image
         uses: docker/build-push-action@v6
         with:
-          context: src
+          context: .
           file: src/release/Dockerfile-server
           push: ${{ github.event_name != 'pull_request' }}
           tags: |

@@ -44,5 +44,6 @@ int Login(int socket, const char *str_user_id, const char *str_password);
 int CreateRoom(int socket, const char *str_room_id, const char *str_password, const char *str_user_id);
 int SearchRoom(int socket, const char *str_room_id);
 int ListRooms(int socket);
+int JoinRoom(int socket, const char *str_room_id, const char *str_password);
 
 #endif

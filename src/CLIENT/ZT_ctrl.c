@@ -23,6 +23,7 @@ st_commands_t       gp_commands [] = {
     {"signup",3,"User signup"},
     {"login",2,"User login"},
     {"create",2,"Create room (id, pw)"},
+    {"enter",2,"Enter room (id, pw)"},
     {"list",0,"Show room list"},
     {"history",0,"History"},
     {"log",1,"on/off : Log (default off)"},
@@ -114,6 +115,28 @@ void CTRL_proc(int argc, char **argv)
 		return;
 	}
 
+	if (!strcasecmp(argv[0], "enter"))
+	{
+		int rc;
+
+		if (g_socket_fd < 0) {
+			LOG_MSG("[enter] Socket not connected\n");
+			return;
+		}
+
+		if (argc < 3) {
+			LOG_MSG("[enter] Usage: enter <room_id> <password>\n");
+			return;
+		}
+
+		rc = JoinRoom(g_socket_fd, argv[1], argv[2]);
+		if (rc == 0)
+			LOG_MSG("[enter] Enter room request sent\n");
+		else
+			LOG_MSG("[enter] Enter room send fail\n");
+		return;
+	}
+
 	if (!strcasecmp(argv[0], "list"))
 	{
 		int rc;
@@ -184,6 +207,7 @@ static void *CTRL_handler(void *ctx)
 	static char signup_buf[3][64];
 	static char login_buf[2][64];
 	static char cre_buf[2][64];
+	static char enter_buf[2][64];
 	char *argv[MAX_ARGC];
 	int nargs, i, need;
 	char *p;
@@ -252,6 +276,24 @@ static void *CTRL_handler(void *ctx)
 				p = strchr(cre_buf[i], '\n');
 				if (p) *p = '\0';
 				argv[nargs] = cre_buf[i];
+				nargs++;
+			}
+		}
+
+		if (!strcasecmp(argv[0], "enter") && nargs < 3)
+		{
+			const char *prompts[] = {"room_id: ", "password: "};
+			need = 3 - nargs;
+
+			for (i = 0; i < need && nargs < 3; i++)
+			{
+				printf("%s", prompts[nargs - 1]);
+				fflush(stdout);
+				if (!fgets(enter_buf[i], sizeof(enter_buf[i]), stdin))
+					break;
+				p = strchr(enter_buf[i], '\n');
+				if (p) *p = '\0';
+				argv[nargs] = enter_buf[i];
 				nargs++;
 			}
 		}

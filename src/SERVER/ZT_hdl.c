@@ -596,6 +596,16 @@ int HDL_SOCKET ( int epfd, int socket )
 			continue;
 		}
 
+		if ( n <= 0 )
+		{
+			/* 클라이언트 연결 종료 또는 read 오류 → 해당 클라이언트만 정리 */
+			if ( n == 0 )
+				LOG_MSG("[HDL_SOCKET] FD=%d closed (client disconnect)\n", socket);
+			else
+				LOG_MSG("[HDL_SOCKET] Read error FD=%d <%d:%s>\n", socket, errno, strerror(errno));
+			return SOCKET_CLIENT_DISCONNECT;
+		}
+
 		buf[n] = '\0';
 
 		LOG_FMT_CENTER("HDL_SOCKET_Request");
@@ -610,9 +620,9 @@ int HDL_SOCKET ( int epfd, int socket )
 
 		if( !method || !uri || !version )
 		{
-			LOG_MSG("[HDL_SOCKET] Invalid Request Line\n");
+			LOG_MSG("[HDL_SOCKET] Invalid Request Line FD=%d\n", socket);
 			HDL_400( socket );
-			return ERR_ARG_INVALID;
+			return SOCKET_CLIENT_DISCONNECT;
 		}
 
 		/* Start Line Parsing */
@@ -701,13 +711,7 @@ int HDL_SOCKET ( int epfd, int socket )
 		break;
 	}
 
-	if( n == 0 )
-	{
-		LOG_MSG("[DICONNECT] FD=%d closed\n", socket);
-		return SOCKET_OK;
-	}
-	
-    return SOCKET_OK;
+	return SOCKET_OK;
 }
 
 int HDL_ACCEPT( int socket, int epfd )

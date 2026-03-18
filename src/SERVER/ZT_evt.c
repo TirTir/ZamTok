@@ -3,6 +3,8 @@
 #include "ZT_log_fmt.h"
 #include "ZT_hdl.h"
 
+extern unsigned char g_client_fd[MAX_CLIENTS/8];
+
 int SET_NONBLOCKING (int socket )
 {
 	int flags = -1;
@@ -229,10 +231,17 @@ int EventLoop ( int socket )
 				if( tEvents[i].events & EPOLLIN )
 				{
 					rc = HDL_SOCKET ( epfd, fd );
-					if( rc < 0 )
+					if( rc != SOCKET_OK )
 					{
-						LOG_MSG("[EventLoop] HDL_SOCKET fail\n");
-						goto close_event;
+						/* 클라이언트 끊김/잘못된 요청 → 해당 fd만 정리하고 서버는 계속 동작 */
+						if( rc == SOCKET_CLIENT_DISCONNECT )
+							LOG_MSG("[EventLoop] Client FD=%d disconnect, closing\n", fd);
+						else
+							LOG_MSG("[EventLoop] HDL_SOCKET fail FD=%d (rc=%d), closing\n", fd, rc);
+						(void)epoll_ctl( epfd, EPOLL_CTL_DEL, fd, NULL );
+						close( fd );
+						if ( fd >= 0 && fd < MAX_CLIENTS )
+							g_client_fd[fd/8] &= (unsigned char)~( 1 << ( fd % 8 ) );
 					}
 				}
 			}
@@ -242,6 +251,7 @@ int EventLoop ( int socket )
 	return SOCKET_OK;
 
 close_event:
+	/* 치명적 오류(리스너/epoll 설정 실패 등) 시에만 진입 */
 	if ( fd >= 0 )
 		close(fd);
 	return ERR_EVENTLOOP;

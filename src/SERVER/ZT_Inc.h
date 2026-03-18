@@ -22,6 +22,7 @@
 
 typedef enum {
     SOCKET_OK = 0,
+    SOCKET_CLIENT_DISCONNECT = 1,  /* 해당 클라이언트만 정리하고 이벤트 루프는 유지 */
     ERR_ARG_INVALID = -1,
     ERR_SOCKET_INIT = -2,
     ERR_SOCKET_BIND = -3,

@@ -14,10 +14,13 @@ spec:
     spec:
       containers:
         - name: server
-          image: test-server:1.0
-          imagePullPolicy: Never
+          image: test-server:1.2
+          imagePullPolicy: IfNotPresent
           command: ["./server"]
           args: ["9000"]
+          envFrom:
+            - configMapRef:
+                name: server-config
           ports:
             - containerPort: 9000
 ---

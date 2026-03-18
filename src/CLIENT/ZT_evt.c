@@ -2,6 +2,8 @@
 #include "ZT_sock.h"
 #include "ZT_hdl.h"
 #include "ZT_ctrl.h"
+#include "ZT_log.h"
+#include "ZT_log_fmt.h"
 
 int EventLoop(int socket, int is_client)
 {
@@ -10,13 +12,13 @@ int EventLoop(int socket, int is_client)
 	int i, n, rc = 0;
 
 	if (socket < 0) {
-		printf("[EventLoop] Socket FD is Wrong\n");
+		LOG_MSG("[EventLoop] Socket FD is Wrong\n");
 		return ERR_ARG_INVALID;
 	}
 
 	epfd = epoll_create1(0);
 	if (epfd < 0) {
-		printf("[EventLoop] Epoll Create Fail\n");
+		LOG_MSG("[EventLoop] Epoll Create Fail\n");
 		return ERR_EPOLL_CREATE;
 	}
 
@@ -24,24 +26,24 @@ int EventLoop(int socket, int is_client)
 	tEv.data.fd = socket;
 	rc = epoll_ctl(epfd, EPOLL_CTL_ADD, socket, &tEv);
 	if (rc < 0) {
-		printf("[EventLoop] Epoll Control Fail\n");
+		LOG_MSG("[EventLoop] Epoll Control Fail\n");
 		goto close_event;
 	}
 
 	rc = SET_NONBLOCKING(socket);
 	if (rc < 0) {
-		printf("[EventLoop] Set Nonblocking Fail\n");
+		LOG_MSG("[EventLoop] Set Nonblocking Fail\n");
 		goto close_event;
 	}
 
-	printf("======================= Waiting for data =======================\n");
+	LOG_FMT_CENTER("Waiting for data");
 
 	while (1) {
 		n = epoll_wait(epfd, tEvents, MAX_EVENTS, -1);
 		if (n < 0) {
 			if (errno == EINTR)
 				continue;
-			printf("[EventLoop] Epoll Wait Fail\n");
+			LOG_MSG("[EventLoop] Epoll Wait Fail\n");
 			goto close_event;
 		}
 
@@ -54,7 +56,7 @@ int EventLoop(int socket, int is_client)
 				rc = HDL_ACCEPT(socket);
 				if (rc < 0) 
 				{
-					printf("[EventLoop] HDL_ACCEPT fail\n");
+					LOG_MSG("[EventLoop] HDL_ACCEPT fail\n");
 					goto close_event;
 				}
 			} 
@@ -71,7 +73,7 @@ int EventLoop(int socket, int is_client)
 					}
 					
 					if (rc < 0) {
-						printf("[EventLoop] %s fail\n", is_client ? "HDL_CLIENT_RECV" : "HDL_SOCKET");
+						LOG_MSG("[EventLoop] %s fail\n", is_client ? "HDL_CLIENT_RECV" : "HDL_SOCKET");
 						goto close_event;
 					}
 				}

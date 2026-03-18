@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -Wall -Wextra -O2
+CFLAGS = -g -Wall -Wextra -O2 -I../common
 RM = rm -f
 
 # Makefile이 있는 디렉터리 기준 (다른 경로에서 make 해도 동일 동작)
@@ -12,6 +12,7 @@ SRCS = ZT_main.c \
        ZT_ctx.c  \
        ZT_evt.c  \
        ZT_hdl.c  \
+       ZT_redis.c
 
 OBJDIR := $(RELEASE_DIR)
 OBJS = $(SRCS:%.c=$(OBJDIR)/%.o)
@@ -33,7 +34,7 @@ $(OBJDIR)/%.o: %.c | $(OBJDIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(RELEASE_DIR)/$(TARGET_NAME): $(OBJS) | $(OBJDIR)
-	$(CC) $(CFLAGS) -o $@ $^ -lpthread
+	$(CC) $(CFLAGS) -o $@ $^ -lpthread -lhiredis
 
 clean:
 	$(RM) $(OBJS) $(RELEASE_DIR)/$(TARGET_NAME)

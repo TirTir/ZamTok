@@ -31,7 +31,19 @@ typedef struct Session {
     char session_id[SESSION_ID_MAX_LEN];
 } session_t;
 
+#define ROOM_ID_MAX_LEN 16
+
+typedef struct Room {
+    char str_room_id[ROOM_ID_MAX_LEN];
+    char str_pwd[PASSWORD_MAX_LEN];
+    char str_creator_id[USER_ID_MAX_LEN]; /* 생성한 유저 id (없으면 빈 문자열) */
+} room_t;
+
 int Join(int socket, const user_t *pt_user);
 int Login(int socket, const char *str_user_id, const char *str_password);
+int CreateRoom(int socket, const char *str_room_id, const char *str_password, const char *str_user_id);
+int SearchRoom(int socket, const char *str_room_id);
+int ListRooms(int socket);
+int JoinRoom(int socket, const char *str_room_id, const char *str_password);
 
 #endif

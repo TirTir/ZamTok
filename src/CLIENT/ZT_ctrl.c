@@ -1,6 +1,8 @@
 #include "ZT_Inc.h"
 #include "ZT_ctrl.h"
 #include "ZT_sock.h"
+#include "ZT_log.h"
+#include "ZT_log_fmt.h"
 #include <stdio.h>
 #include <strings.h>
 #include <pthread.h>
@@ -12,6 +14,7 @@
 char                gstr_read_line [128] = {'\0',};
 extern int          gi_pcap_open;
 static int          g_socket_fd = -1;
+static char         g_login_user_id[USER_ID_MAX_LEN] = {0};
 
 st_commands_t       gp_commands [] = {
 
@@ -19,6 +22,9 @@ st_commands_t       gp_commands [] = {
     {"help",0,"This Screen"},
     {"signup",3,"User signup"},
     {"login",2,"User login"},
+    {"create",2,"Create room (id, pw)"},
+    {"enter",2,"Enter room (id, pw)"},
+    {"list",0,"Show room list"},
     {"history",0,"History"},
     {"log",1,"on/off : Log (default off)"},
     {"quit",1,"Program quit"},
@@ -38,12 +44,12 @@ void CTRL_proc(int argc, char **argv)
 		int rc;
 
 		if (g_socket_fd < 0) {
-			printf("[signup] Socket not connected\n");
+			LOG_MSG("[signup] Socket not connected\n");
 			return;
 		}
 
 		if (argc < 4) {
-			printf("[signup] Usage: signup <user_id> <name> <password>\n");
+			LOG_MSG("[signup] Usage: signup <user_id> <name> <password>\n");
 			return;
 		}
 		snprintf(t_user.str_user_id, sizeof(t_user.str_user_id), "%.15s", argv[1]);
@@ -52,9 +58,9 @@ void CTRL_proc(int argc, char **argv)
 
 		rc = Join(g_socket_fd, &t_user);
 		if (rc == 0)
-			printf("[signup] Join request sent\n");
+			LOG_MSG("[signup] Join request sent\n");
 		else
-			printf("[signup] Join send fail\n");
+			LOG_MSG("[signup] Join send fail\n");
 		return;
 	}
 
@@ -63,45 +69,110 @@ void CTRL_proc(int argc, char **argv)
 		int rc;
 
 		if (g_socket_fd < 0) {
-			printf("[login] Socket not connected\n");
+			LOG_MSG("[login] Socket not connected\n");
 			return;
 		}
 
 		if (argc < 3) {
-			printf("[login] Usage: login <user_id> <password>\n");
+			LOG_MSG("[login] Usage: login <user_id> <password>\n");
 			return;
 		}
 
 		rc = Login(g_socket_fd, argv[1], argv[2]);
+		if (rc == 0) {
+			LOG_MSG("[login] Login request sent\n");
+			snprintf(g_login_user_id, sizeof(g_login_user_id), "%.15s", argv[1]);
+		} else {
+			LOG_MSG("[login] Login send fail\n");
+		}
+		return;
+	}
+
+	if (!strcasecmp(argv[0], "create"))
+	{
+		int rc;
+
+		if (g_socket_fd < 0) {
+			LOG_MSG("[create] Socket not connected\n");
+			return;
+		}
+
+		if (g_login_user_id[0] == '\0') {
+			LOG_MSG("[create] Please login first\n");
+			return;
+		}
+
+		if (argc < 3) {
+			LOG_MSG("[create] Usage: create <room_id> <password>\n");
+			return;
+		}
+
+		rc = CreateRoom(g_socket_fd, argv[1], argv[2], g_login_user_id);
 		if (rc == 0)
-			printf("[login] Login request sent\n");
+			LOG_MSG("[create] Create room request sent\n");
 		else
-			printf("[login] Login send fail\n");
+			LOG_MSG("[create] Create room send fail\n");
+		return;
+	}
+
+	if (!strcasecmp(argv[0], "enter"))
+	{
+		int rc;
+
+		if (g_socket_fd < 0) {
+			LOG_MSG("[enter] Socket not connected\n");
+			return;
+		}
+
+		if (argc < 3) {
+			LOG_MSG("[enter] Usage: enter <room_id> <password>\n");
+			return;
+		}
+
+		rc = JoinRoom(g_socket_fd, argv[1], argv[2]);
+		if (rc == 0)
+			LOG_MSG("[enter] Enter room request sent\n");
+		else
+			LOG_MSG("[enter] Enter room send fail\n");
+		return;
+	}
+
+	if (!strcasecmp(argv[0], "list"))
+	{
+		int rc;
+
+		if (g_socket_fd < 0) {
+			LOG_MSG("[list] Socket not connected\n");
+			return;
+		}
+
+		rc = ListRooms(g_socket_fd);
+		if (rc == 0)
+			LOG_MSG("[list] Room list request sent\n");
+		else
+			LOG_MSG("[list] Room list send fail\n");
 		return;
 	}
 	
-	if (!strcasecmp(argv[0], "help")) 
+	if (!strcasecmp(argv[0], "help"))
 	{
 		int i = 0;
-		printf("================================================\n");
-		printf("%-12s  %s\n", "Command", "Description");
-		printf("================================================\n");
-
-		while(gp_commands[i].name)
-		{
-			printf("%-12s  %s\n", gp_commands[i].name, gp_commands[i].doc);
+		LOG_FMT_SEP();
+		LOG_FMT_LINE("Command", "Description");
+		LOG_FMT_SEP();
+		while (gp_commands[i].name) {
+			LOG_FMT_LINE(gp_commands[i].name, gp_commands[i].doc);
 			i++;
 		}
 		return;
 	}
 	
-	if (!strcasecmp(argv[0], "quit") || !strcasecmp(argv[0], "exit")) 
-	{
-		printf("[CMD_LINE] quit\n");
+	if (!strcasecmp(argv[0], "quit") || !strcasecmp(argv[0], "exit")) {
+		LOG_MSG("[CMD_LINE] quit\n");
 		exit(0);
-	} 
+	}
 	else {
-		printf("[CMD_LINE] unknown command: %s (try 'help')\n", argv[0]);
+		LOG_MSG("[CMD_LINE] unknown command: %s (try 'help')\n", argv[0]);
 	}
 }
 
@@ -135,6 +206,8 @@ static void *CTRL_handler(void *ctx)
 	static char line_buf[MAX_CMD_LEN];
 	static char signup_buf[3][64];
 	static char login_buf[2][64];
+	static char cre_buf[2][64];
+	static char enter_buf[2][64];
 	char *argv[MAX_ARGC];
 	int nargs, i, need;
 	char *p;
@@ -185,6 +258,42 @@ static void *CTRL_handler(void *ctx)
 				p = strchr(login_buf[i], '\n');
 				if (p) *p = '\0';
 				argv[nargs] = login_buf[i];
+				nargs++;
+			}
+		}
+
+		if (!strcasecmp(argv[0], "create") && nargs < 3)
+		{
+			const char *prompts[] = {"room_id: ", "password: "};
+			need = 3 - nargs;
+
+			for (i = 0; i < need && nargs < 3; i++)
+			{
+				printf("%s", prompts[nargs - 1]);
+				fflush(stdout);
+				if (!fgets(cre_buf[i], sizeof(cre_buf[i]), stdin))
+					break;
+				p = strchr(cre_buf[i], '\n');
+				if (p) *p = '\0';
+				argv[nargs] = cre_buf[i];
+				nargs++;
+			}
+		}
+
+		if (!strcasecmp(argv[0], "enter") && nargs < 3)
+		{
+			const char *prompts[] = {"room_id: ", "password: "};
+			need = 3 - nargs;
+
+			for (i = 0; i < need && nargs < 3; i++)
+			{
+				printf("%s", prompts[nargs - 1]);
+				fflush(stdout);
+				if (!fgets(enter_buf[i], sizeof(enter_buf[i]), stdin))
+					break;
+				p = strchr(enter_buf[i], '\n');
+				if (p) *p = '\0';
+				argv[nargs] = enter_buf[i];
 				nargs++;
 			}
 		}

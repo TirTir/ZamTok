@@ -1,6 +1,7 @@
 #include "ZT_Inc.h"
 #include "ZT_ctx.h"
 #include "ZT_log.h"
+#include "ZT_log_fmt.h"
 
 #define HEADER_FMT "HTTP/%.15s %d %.63s\r\nContent-Length: %.63s\r\nContent-Type: %.63s\r\n\r\n"
 
@@ -109,13 +110,13 @@ int HDL_HEADER_MIME( char *p_content_type, int size, const char *p_uri )
 {
 	if( p_content_type == NULL )
 	{
-		printf("[HDL_HEADER_MIME] Content Type is NULL\n");
+		LOG_MSG("[HDL_HEADER_MIME] Content Type is NULL\n");
 		return ERR_ARG_INVALID;
 	}
 	
 	if( p_uri == NULL )
 	{
-		printf("[HDL_HEADER_MIME] URI is NULL\n");
+		LOG_MSG("[HDL_HEADER_MIME] URI is NULL\n");
 		return ERR_ARG_INVALID;
 	}
 
@@ -159,7 +160,7 @@ int HDL_CLIENT_RECV(int socket)
 	int n;
 
 	if (socket < 0) {
-		printf("[HDL_CLIENT_RECV] Socket FD is Wrong\n");
+		LOG_MSG("[HDL_CLIENT_RECV] Socket FD is Wrong\n");
 		return ERR_ARG_INVALID;
 	}
 
@@ -169,14 +170,14 @@ int HDL_CLIENT_RECV(int socket)
 	}
 	if (n <= 0) {
 		if (n == 0)
-			printf("[HDL_CLIENT_RECV] Connection closed\n");
+			LOG_MSG("[HDL_CLIENT_RECV] Connection closed\n");
 
 		return -1;
 	}
 
 	buf[n] = '\0';
-	printf("====================== Server Response ======================\n");
-	printf("%s\n", buf);
+	LOG_FMT_CENTER("Server Response");
+	LOG_MSG("%s\n", buf);
 
 	return SOCKET_OK;
 }
@@ -199,13 +200,13 @@ int HDL_SOCKET ( int epfd, int socket )
 
 	if( epfd < 0 )
 	{
-		printf("[HDL_SOCKET] Epoll FD is Wrong\n");
+		LOG_MSG("[HDL_SOCKET] Epoll FD is Wrong\n");
 		return ERR_ARG_INVALID;
 	}
 
 	if( socket < 0 )
 	{
-		printf("[HDL_SOCKET] Socket FD is Wrong\n");
+		LOG_MSG("[HDL_SOCKET] Socket FD is Wrong\n");
 		return ERR_ARG_INVALID;
 	}
 
@@ -218,15 +219,15 @@ int HDL_SOCKET ( int epfd, int socket )
 		
 		if( n < 0 && ( errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR ) )
 		{
-			printf("[HDL_SOCKET] Read Socket Fail FD=%d <%d:%s>\n", socket, errno, strerror(errno));
+			LOG_MSG("[HDL_SOCKET] Read Socket Fail FD=%d <%d:%s>\n", socket, errno, strerror(errno));
 			retry_cnt++;
 			continue;
 		}
 
 		buf[n] = '\0';
 
-		printf("====================== HDL_SOCKET_Request ======================\n");
-		printf("%s\n", buf);
+		LOG_FMT_CENTER("HDL_SOCKET_Request");
+		LOG_MSG("%s\n", buf);
 
 		snprintf( parse, sizeof(parse), "%s", buf );
 
@@ -236,7 +237,7 @@ int HDL_SOCKET ( int epfd, int socket )
 
 		if( !method || !uri || !version )
 		{
-			printf("[HDL_SOCKET] Invalid Request Line\n");
+			LOG_MSG("[HDL_SOCKET] Invalid Request Line\n");
 			HDL_400( socket );
 			return ERR_ARG_INVALID;
 		}
@@ -267,8 +268,8 @@ int HDL_SOCKET ( int epfd, int socket )
 	        return ERR_SOCKET_READ;
 		}
 
-		printf("====================== HDL_SOCKET_Request Parsing ======================\n");
-		printf("Method: %s, URI: %s\n", t_msg.method, t_msg.uri);
+		LOG_FMT_CENTER("HDL_SOCKET_Request Parsing");
+		LOG_MSG("Method: %s, URI: %s\n", t_msg.method, t_msg.uri);
 		
 		//write( socket, t_msg.t_general_header, strlen( t_msg.t_general_header ));
 
@@ -276,7 +277,7 @@ int HDL_SOCKET ( int epfd, int socket )
 
 	if( n == 0 )
 	{
-		printf("[DICONNECT] FD=%d closed\n", socket );
+		LOG_MSG("[DICONNECT] FD=%d closed\n", socket);
 		return SOCKET_OK;
 	}
 	
@@ -294,14 +295,14 @@ int HDL_ACCEPT( int socket )
     client_fd = accept( socket, (struct sockaddr *)&t_client_addr, &un_socket_len );
 	if( client_fd < 0 )
 	{
-		printf("[HDL_ACCEPT] Socket Accept Fail\n");
+		LOG_MSG("[HDL_ACCEPT] Socket Accept Fail\n");
 		return ERR_SOCKET_ACCEPT;
 	}
 
     rc = CTX_Http_Insert( &gt_ctx_info, client_fd, t_client_addr ); 
     if( rc < 0 )
     {
-        printf("[HDL_ACCEPT] Insert Client Info Fail\n");
+        LOG_MSG("[HDL_ACCEPT] Insert Client Info Fail\n");
         return ERR_CTX_INSERT;
     }
 	

@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -Wall -Wextra -O2
+CFLAGS = -g -Wall -Wextra -O2 -I../common
 RM = rm -f
 
 # Makefile이 있는 디렉터리 기준 (다른 경로에서 make 해도 동일 동작)

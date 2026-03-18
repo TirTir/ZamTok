@@ -1,0 +1,32 @@
+# ----- [Stage 1: Build] -----
+FROM rockylinux:9 AS builder
+
+# 빌드 필수 도구 설치
+RUN dnf install -y --allowerasing gcc make tar curl
+
+# hiredis 1.1.0 소스 설치
+RUN curl -L https://github.com/redis/hiredis/archive/refs/tags/v1.1.0.tar.gz -o hiredis.tar.gz && \
+    tar xvzf hiredis.tar.gz && \
+    cd hiredis-1.1.0 && \
+    make && make install
+
+
+# ----- [Stage 2: Runtime] -----
+FROM rockylinux:9
+
+WORKDIR /app
+
+# .so 파일 복사
+COPY --from=builder /usr/local/lib/libhiredis.so* /usr/local/lib/
+
+# 동적 링커 경로 설정 및 캐시 갱신
+RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && \
+    ldconfig
+
+# 서버 바이너리 복사
+COPY SERVER /app/server
+RUN chmod +x /app/server
+
+EXPOSE 8080
+
+CMD ["/app/server", "8080"]

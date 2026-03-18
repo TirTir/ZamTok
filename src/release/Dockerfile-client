@@ -1,0 +1,10 @@
+FROM rockylinux:9
+
+WORKDIR /app
+
+COPY CLIENT /app/client
+
+RUN chmod +x /app/client
+
+CMD ["./client"]
+#CMD ["sleep", 3600]

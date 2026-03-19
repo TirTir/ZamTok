@@ -40,12 +40,10 @@ jobs:
           ls -la release/Dockerfile* 2>/dev/null || true
           echo "src/release Dockerfiles:"
           ls -la src/release/Dockerfile* 2>/dev/null || true
-
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc make libhiredis-dev
-
       - name: Build client
         run: make -C src/CLIENT rb
 
@@ -56,7 +54,6 @@ jobs:
         run: |
           cp src/release/CLIENT src/CLIENT
           cp src/release/SERVER src/SERVER
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -67,17 +64,16 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./src
-          file: release/Dockerfile-client
+          file: src/release/Dockerfile-client
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/zamtok-client:latest
             ${{ secrets.DOCKER_USERNAME }}/zamtok-client:${{ github.sha }}
-
       - name: Build and push server image
         uses: docker/build-push-action@v6
         with:
           context: ./src
-          file: release/Dockerfile-server
+          file: src/release/Dockerfile-server
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/zamtok-server:latest

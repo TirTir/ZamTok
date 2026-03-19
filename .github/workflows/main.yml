@@ -67,7 +67,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./src
-          file: src/release/Dockerfile-client
+          file: release/Dockerfile-client
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/zamtok-client:latest
@@ -77,7 +77,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./src
-          file: src/release/Dockerfile-server
+          file: release/Dockerfile-server
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/zamtok-server:latest

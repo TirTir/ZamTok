@@ -1,5 +1,6 @@
 /* Pod apply */
 kubectl apply -f <yaml>
+kubectl apply -f pvc.yaml -f deployment.yaml -f service.yaml
 
 /* Pod delete */
 kubectl delete pod <Pod>
@@ -10,6 +11,7 @@ kubectl rollout restart statefulset test-server
 
 /* Shell */
 kubectl exec -it <Pod> -- /bin/sh
+kubectl exec -it <pod-name> -- /bin/bash -il
 
 /* Pod Spec */
 kubectl describe pod <Pod>

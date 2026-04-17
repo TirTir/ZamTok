@@ -5,3 +5,17 @@ metadata:
 data:
   REDIS_HOST: "redis-service"
   REDIS_PORT: "6379"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: 
+  name: zamtok-script-volume
+data:
+  setup.sh: |
+    #!/bin/sh  
+    echo "alias vlog='tail -f /var/log/zamtok/server.log'" >> ~/.bashrc
+    echo "alias vlog='tail -f /var/log/zamtok/server.log'" >> ~/.profile
+    
+    mkdir -p /var/log/zamtok
+    exec ./server 9000 >> /var/log/zamtok/server.log 2>&1

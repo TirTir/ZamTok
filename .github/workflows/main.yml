@@ -68,7 +68,6 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/zamtok-client:latest
-            ${{ secrets.DOCKER_USERNAME }}/zamtok-client:${{ github.sha }}
       - name: Build and push server image
         uses: docker/build-push-action@v6
         with:
@@ -77,4 +76,3 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/zamtok-server:latest
-            ${{ secrets.DOCKER_USERNAME }}/zamtok-server:${{ github.sha }}

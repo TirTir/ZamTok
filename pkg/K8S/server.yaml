@@ -16,9 +16,12 @@ spec:
     spec:
       containers:
         - name: server
-          image: test-server:1.2
-          imagePullPolicy: IfNotPresent
-          command: ["sh", "/scripts/setup.sh"]
+          image: tirtir0827/zamtok-server:latest
+          imagePullPolicy: Always
+#         imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - sh /scripts/setup.sh
           envFrom:
             - configMapRef:
                 name: server-config

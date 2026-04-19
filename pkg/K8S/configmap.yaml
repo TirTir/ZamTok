@@ -14,8 +14,8 @@ metadata:
 data:
   setup.sh: |
     #!/bin/sh  
-    echo "alias vlog='tail -f /var/log/zamtok/server.log'" >> ~/.bashrc
-    echo "alias vlog='tail -f /var/log/zamtok/server.log'" >> ~/.profile
+    echo "alias vlog='tail -f /storage/zamtok/server.log'" >> ~/.bashrc
+    echo "alias vlog='tail -f /storage/zamtok/server.log'" >> ~/.profile
     
-    mkdir -p /var/log/zamtok
-    exec ./server 9000 >> /var/log/zamtok/server.log 2>&1
+    mkdir -p /storage/zamtok
+    exec ./server 9000 >> /storage/zamtok/server.log 2>&1

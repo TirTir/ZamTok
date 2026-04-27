@@ -2,9 +2,9 @@ FROM rockylinux:9
 
 WORKDIR /app
 
-COPY CLIENT /app/client
+COPY CLIENT/release/CLIENT /app/client
 
-RUN test -f /app/client && chmod +x /app/client
+RUN chmod +x /app/client
 
 CMD ["./client"]
 #CMD ["sleep", 3600]

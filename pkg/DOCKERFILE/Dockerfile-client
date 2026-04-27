@@ -1,10 +1,16 @@
 FROM rockylinux:9
 
+RUN dnf install -y gcc make && dnf clean all
+
+WORKDIR /build/CLIENT
+
+COPY CLIENT /build/CLIENT
+
+RUN mkdir -p /app \
+    && make \
+    && cp /build/CLIENT/release/CLIENT /app/client \
+    && chmod +x /app/client
+
 WORKDIR /app
 
-COPY CLIENT/release/CLIENT /app/client
-
-RUN chmod +x /app/client
-
 CMD ["./client"]
-#CMD ["sleep", 3600]

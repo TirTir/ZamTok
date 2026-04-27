@@ -11,21 +11,6 @@
 extern ZT_CTX_t gt_ctx_info;
 extern unsigned char g_client_fd[MAX_CLIENTS/8];
 
-/*------------------------------------------------
- * Extern Function
--------------------------------------------------*/
-
-void HDL_400 ( int socket );
-void HDL_500 ( int socket );
-
-static int HDL_Join( int socket, const char *buf, ReqType_t *t_msg );
-static int HDL_Login( int socket, const char *buf, ReqType_t *t_msg );
-static int HDL_CreateRoom( int socket, const char *buf, ReqType_t *t_msg );
-static int HDL_SearchRoom( int socket, const char *buf, ReqType_t *t_msg );
-static int HDL_JoinRoom( int socket, const char *buf, ReqType_t *t_msg );
-static int HDL_ListRooms( int socket, const char *buf, ReqType_t *t_msg );
-
-
 /*=================================================
  * name : HDL_HEADER
  * return : 
@@ -149,27 +134,26 @@ int HDL_HEADER_MIME( char *p_content_type, int size, const char *p_uri )
  * desc  : POST /join JSON body {"user_id":"xxx","name":"yyy","password":"zzz"}
  *         Redis user:{user_id} HASH에 name, pwd, created_at 저장
  ===================================================*/
+ #define NAME_KEY "\"name\""
 static int HDL_Join( int socket, const char *buf, ReqType_t *t_msg )
 {
-	const char *p_body = NULL;
 	user_t t_user = {0};
-	char res_buf[BUF_MAX_LEN] = {0};
-	char json_body[256] = {0};
-	int rc;
-	const char *p_val = NULL;
+	ResType_t t_response = {0};
+
+	int rc = 0;
+	int status = 0;
+	const char *p_body = NULL;
+	ZtErrCode e_code = ZT_ERR_INVALID_PARAMS;
 
 	if ( socket < 0 || buf == NULL || t_msg == NULL )
 		return ERR_ARG_INVALID;
 
-	if ( strncmp( t_msg->method, "POST", 4 ) )
+	/* 1. Method Check */
+	if ( strncmp( t_request->method, "POST", 4 ) )
 	{
-		snprintf( res_buf, sizeof(res_buf),
-			"HTTP/1.1 405 Method Not Allowed\r\n"
-			"Content-Type: application/json\r\n"
-			"Content-Length: 35\r\n\r\n"
-			"{\"result\":\"fail\",\"reason\":\"POST only\"}" );
-		rc = write( socket, res_buf, strlen(res_buf) );
-		return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
+		status = 405;
+		e_code = ZT_ERR_METHOD_NOT_ALLOWED;
+		goto err_return;
 	}
 
 	p_body = strstr( buf, "\r\n\r\n" );
@@ -180,117 +164,129 @@ static int HDL_Join( int socket, const char *buf, ReqType_t *t_msg )
 	else
 		p_body = buf;
 
-	p_val = strstr( p_body, "\"user_id\"" );
-	if ( p_val ) { p_val = strchr( p_val + 9, '"' ); if ( p_val ) { p_val++; sscanf( p_val, "%15[^\"]", t_user.str_user_id ); } }
-	p_val = strstr( p_body, "\"name\"" );
-	if ( p_val ) { p_val = strchr( p_val + 6, '"' ); if ( p_val ) { p_val++; sscanf( p_val, "%15[^\"]", t_user.str_name ); } }
-	p_val = strstr( p_body, "\"password\"" );
-	if ( p_val ) { p_val = strchr( p_val + 11, '"' ); if ( p_val ) { p_val++; sscanf( p_val, "%15[^\"]", t_user.str_pwd ); } }
+	/* 2. Body Parsing */
+	Get_Value_From_Body( p_body, USER_ID_KEY, &t_user.str_user_id, &len );
+	Get_Value_From_Body( p_body, NAME_KEY, &t_user.str_name, &len );
+	Get_Value_From_Body( p_body, PASSWORD_KEY, &t_user.str_pwd, &len );
 
+	/* 3. User Check */
+	if ( t_user.str_user_id[0] == '\0' || t_user.str_name[0] == '\0' || t_user.str_pwd[0] == '\0' )
+	{
+		status = 400;
+		e_code = ZT_ERR_INVALID_PARAMS;
+		goto err_return;
+	}
+
+	/* 4. User Save to Redis */
 	rc = ZT_REDIS_UserSave( &t_user );
 	if ( rc == -1 )
-		snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"user_id already exists\"}" );
+	{
+		status = 409;
+		e_code = ZT_ERR_USER_ALREADY_EXISTS;
+		goto err_return;
+	}
 	else if ( rc != 0 )
-		snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"server error\"}" );
-	else
-		snprintf( json_body, sizeof(json_body), "{\"result\":\"ok\",\"user_id\":\"%s\"}", t_user.str_user_id );
+	{
+		status = 500;
+		e_code = ZT_ERR_SERVER_ERROR;
+		goto err_return;
+	}
 
-	snprintf( res_buf, sizeof(res_buf),
-		"HTTP/1.1 200 OK\r\n"
-		"Content-Type: application/json\r\n"
-		"Content-Length: %d\r\n\r\n%s",
-		(int)strlen(json_body), json_body );
-	rc = write( socket, res_buf, strlen(res_buf) );
+	/* 5. Response */
+	t_response = Generate_Response(t_request, 200);
+	Generate_Response_Body( &t_response, RESULT_SUCCESS, e_code, t_user.str_user_id );
+	rc = write( socket, t_response.t_response, strlen(t_response.t_response) );	
+	return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
+
+err_return:
+	t_response = Generate_Response(t_request, status);
+	Generate_Response_Body( &t_response, RESULT_FAIL, e_code, NULL );
+	rc = write( socket, t_response.t_response, strlen(t_response.t_response) );
 	return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
 }
 
 /*=================================================
  * name : HDL_Login
  * return : SOCKET_OK / ERR_*
- * param : socket, buf(전체 HTTP 요청), t_msg
+ * param : socket, buf(전체 HTTP 요청), t_request
  * desc  : POST /login JSON body {"user_id":"xxx","password":"yyy"}
  *         Redis user:{user_id}에서 pwd 조회 후 비교
  ===================================================*/
-static int HDL_Login( int socket, const char *buf, ReqType_t *t_msg )
+ #define USER_ID_KEY "\"user_id\""
+ #define PASSWORD_KEY "\"password\""
+static int HDL_Login( int socket, const char *buf, ReqType_t *t_request )
 {
-	const char *p_body = NULL;
 	user_t t_user = {0};
+	ResType_t t_response = {0};
 
-	char res_buf[BUF_MAX_LEN] = {0};
-	char json_body[256] = {0};
-	int rc;
-	const char *p_val = NULL;
+	int rc = 0;
+	int status = 0;
+	const char *p_body = NULL;
+	ZtErrCode e_code = ZT_ERR_INVALID_PARAMS;
 
-	if( socket < 0 || buf == NULL || t_msg == NULL )
+	if ( socket < 0 || buf == NULL || t_request == NULL )
 		return ERR_ARG_INVALID;
 
-	/* POST 메소드 확인 */
-	if( strncmp( t_msg->method, "POST", 4 ) )
+	/* 1. Method Check */
+	if ( strncmp( t_request->method, "POST", 4 ) )
 	{
-		snprintf( res_buf, sizeof(res_buf),
-			"HTTP/1.1 405 Method Not Allowed\r\n"
-			"Content-Type: application/json\r\n"
-			"Content-Length: 35\r\n\r\n"
-			"{\"result\":\"fail\",\"reason\":\"POST only\"}" );
-		rc = write( socket, res_buf, strlen(res_buf) );
-		return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
+		status = 405;
+		e_code = ZT_ERR_METHOD_NOT_ALLOWED;
+		goto err_return;
 	}
 
-	/* Body 위치 찾기 (\r\n\r\n 이후) */
 	p_body = strstr( buf, "\r\n\r\n" );
-	if( p_body == NULL )
+	if ( p_body == NULL )
 		p_body = strstr( buf, "\n\n" );
-	if( p_body )
-		p_body += ( strstr(buf,"\r\n\r\n") ? 4 : 2 );
+	if ( p_body )
+		p_body += ( strstr( buf, "\r\n\r\n" ) ? 4 : 2 );
 	else
 		p_body = buf;
 
-	p_val = strstr( p_body, "\"user_id\"" );
-	if( p_val )
-	{
-		p_val = strchr( p_val + 9, '"' );
-		if( p_val )
-		{
-			p_val++;
-			sscanf( p_val, "%15[^\"]", t_user.str_user_id );  /* USER_ID_MAX_LEN-1 */
-		}
-	}
-	p_val = strstr( p_body, "\"password\"" );
-	if( p_val )
-	{
-		p_val = strchr( p_val + 11, '"' );
-		if( p_val )
-		{
-			p_val++;
-			sscanf( p_val, "%15[^\"]", t_user.str_pwd );  /* PASSWORD_MAX_LEN-1 */
-		}
-	}
+	/* 2. Body Parsing */
+	Get_Value_From_Body( p_body, USER_ID_KEY, &t_user.str_user_id, &len );
+	Get_Value_From_Body( p_body, PASSWORD_KEY, &t_user.str_pwd, &len );
 
+	/* 3. User Check */
 	if ( t_user.str_user_id[0] == '\0' || t_user.str_pwd[0] == '\0' )
 	{
-		snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"invalid params\"}" );
+		status = 400;
+		e_code = ZT_ERR_INVALID_PARAMS;
+		goto err_return;
 	}
-	else
+
+	/* 4. User Get From Redis */
+	user_t stored_user = {0};
+	rc = ZT_REDIS_UserGet( t_user.str_user_id, &stored_user );
+	if ( rc == -1 )
 	{
-		user_t stored_user = {0};
-		int get_rc = ZT_REDIS_UserGet( t_user.str_user_id, &stored_user );
-		if ( get_rc == -1 )
-			snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"user not found\"}" );
-		else if ( get_rc != 0 )
-			snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"server error\"}" );
-		else if ( strcmp( stored_user.str_pwd, t_user.str_pwd ) != 0 )
-			snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"wrong password\"}" );
-		else
-			snprintf( json_body, sizeof(json_body), "{\"result\":\"ok\",\"user_id\":\"%s\"}", t_user.str_user_id );
+		status = 401;
+		e_code = ZT_ERR_USER_NOT_FOUND;
+		goto err_return;
+	}
+	else if ( rc != 0 )
+	{
+		status = 500;
+		e_code = ZT_ERR_SERVER_ERROR;
+		goto err_return;
+	}
+	else if ( strcmp( stored_user.str_pwd, t_user.str_pwd ) != 0 )
+	{
+		status = 401;
+		e_code = ZT_ERR_WRONG_PASSWORD;
+		goto err_return;
 	}
 
-	snprintf( res_buf, sizeof(res_buf),
-		"HTTP/1.1 200 OK\r\n"
-		"Content-Type: application/json\r\n"
-		"Content-Length: %d\r\n\r\n%s",
-		(int)strlen(json_body), json_body );
+	/* 3. Response */
+	t_response = Generate_Response(t_request, 200);
+	Generate_Response_Body( &t_response, RESULT_SUCCESS, e_code, NULL );
+	rc = write( socket, t_response.t_response, strlen(t_response.t_response) );	
+		return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
 
-	rc = write( socket, res_buf, strlen(res_buf) );
+err_return:
+	t_response = Generate_Response(t_request, status);
+	Generate_Response_Body( &t_response, RESULT_FAIL, e_code, NULL );
+	rc = write( socket, t_response.t_response, strlen(t_response.t_response) );
 	return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
 }
 
@@ -301,27 +297,26 @@ static int HDL_Login( int socket, const char *buf, ReqType_t *t_msg )
  * desc  : POST /room JSON body {"room_id":"xxx","password":"yyy"}
  *         Redis room:{room_id} HASH에 pwd, created_at, creator_id 저장
  ===================================================*/
-static int HDL_CreateRoom( int socket, const char *buf, ReqType_t *t_msg )
+ #define ROOM_ID_KEY "\"room_id\""
+static int HDL_CreateRoom( int socket, const char *buf, ReqType_t *t_request )
 {
-	const char *p_body = NULL;
 	room_t t_room = {0};
-	char res_buf[BUF_MAX_LEN] = {0};
-	char json_body[256] = {0};
-	int rc;
-	const char *p_val = NULL;
+	ResType_t t_response = {0};
 
-	if ( socket < 0 || buf == NULL || t_msg == NULL )
+	int rc = 0;
+	int status = 0;
+	const char *p_body = NULL;
+	ZtErrCode e_code = ZT_ERR_INVALID_PARAMS;
+
+	if ( socket < 0 || buf == NULL || t_request == NULL )
 		return ERR_ARG_INVALID;
 
-	if ( strncmp( t_msg->method, "POST", 4 ) )
+	/* 1. Method Check */
+	if ( strncmp( t_request->method, "POST", 4 ) )
 	{
-		snprintf( res_buf, sizeof(res_buf),
-			"HTTP/1.1 405 Method Not Allowed\r\n"
-			"Content-Type: application/json\r\n"
-			"Content-Length: 35\r\n\r\n"
-			"{\"result\":\"fail\",\"reason\":\"POST only\"}" );
-		rc = write( socket, res_buf, strlen(res_buf) );
-		return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
+		status = 405;
+		e_code = ZT_ERR_METHOD_NOT_ALLOWED;
+		goto err_return;
 	}
 
 	p_body = strstr( buf, "\r\n\r\n" );
@@ -332,35 +327,44 @@ static int HDL_CreateRoom( int socket, const char *buf, ReqType_t *t_msg )
 	else
 		p_body = buf;
 
-	p_val = strstr( p_body, "\"room_id\"" );
-	if ( p_val ) { p_val = strchr( p_val + 9, '"' ); if ( p_val ) { p_val++; sscanf( p_val, "%15[^\"]", t_room.str_room_id ); } }
-	p_val = strstr( p_body, "\"password\"" );
-	if ( p_val ) { p_val = strchr( p_val + 11, '"' ); if ( p_val ) { p_val++; sscanf( p_val, "%15[^\"]", t_room.str_pwd ); } }
-	/* 옵션: 클라이언트가 user_id를 함께 전달하면 creator 기록 */
-	p_val = strstr( p_body, "\"user_id\"" );
-	if ( p_val ) { p_val = strchr( p_val + 9, '"' ); if ( p_val ) { p_val++; sscanf( p_val, "%15[^\"]", t_room.str_creator_id ); } }
+	/* 2. Body Parsing */
+	Get_Value_From_Body( p_body, ROOM_ID_KEY, &t_room.str_room_id, &len );
+	Get_Value_From_Body( p_body, PASSWORD_KEY, &t_room.str_pwd, &len );
+	Get_Value_From_Body( p_body, USER_ID_KEY, &t_room.str_creator_id, &len );
 
-	if ( t_room.str_room_id[0] == '\0' || t_room.str_pwd[0] == '\0' )
+	/* 3. Room Check */
+	if ( t_room.str_room_id[0] == '\0' || t_room.str_pwd[0] == '\0' || t_room.str_creator_id[0] == '\0' )
 	{
-		snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"invalid params\"}" );
-	}
-	else
-	{
-		rc = ZT_REDIS_RoomSave( &t_room );
-		if ( rc == -1 )
-			snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"room_id already exists\"}" );
-		else if ( rc != 0 )
-			snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"server error\"}" );
-		else
-			snprintf( json_body, sizeof(json_body), "{\"result\":\"ok\",\"room_id\":\"%s\"}", t_room.str_room_id );
+		status = 400;
+		e_code = ZT_ERR_INVALID_PARAMS;
+		goto err_return;
 	}
 
-	snprintf( res_buf, sizeof(res_buf),
-		"HTTP/1.1 200 OK\r\n"
-		"Content-Type: application/json\r\n"
-		"Content-Length: %d\r\n\r\n%s",
-		(int)strlen(json_body), json_body );
-	rc = write( socket, res_buf, strlen(res_buf) );
+	/* 4. Room Save to Redis */
+	rc = ZT_REDIS_RoomSave( &t_room );
+	if ( rc == -1 )
+	{
+		status = 409;
+		e_code = ZT_ERR_ROOM_ALREADY_EXISTS;
+		goto err_return;
+	}
+	else if ( rc != 0 )
+	{
+		status = 500;
+		e_code = ZT_ERR_SERVER_ERROR;
+		goto err_return;
+	}
+
+	/* 5. Response */
+	t_response = Generate_Response(t_request, 200);
+	Generate_Response_Body( &t_response, RESULT_SUCCESS, e_code, t_room.str_room_id );
+	rc = write( socket, t_response.t_response, strlen(t_response.t_response) );
+	return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
+
+err_return:
+	t_response = Generate_Response(t_request, status);
+	Generate_Response_Body( &t_response, RESULT_FAIL, e_code, NULL );
+	rc = write( socket, t_response.t_response, strlen(t_response.t_response) );
 	return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
 }
 
@@ -371,87 +375,93 @@ static int HDL_CreateRoom( int socket, const char *buf, ReqType_t *t_msg )
  * desc  : GET /room?id={room_id}
  *         room_id로 채팅방 존재 여부 조회, 있으면 room_id 반환
  ===================================================*/
-static int HDL_SearchRoom( int socket, const char *buf, ReqType_t *t_msg )
+static int HDL_SearchRoom( ReqType_t *t_request )
 {
-	room_t t_room = {0};
-	char res_buf[BUF_MAX_LEN] = {0};
-	char json_body[256] = {0};
-	char room_id[ROOM_ID_MAX_LEN] = {0};
-	int rc;
-	const char *p_val = NULL;
+	ResType_t t_response = {0};
 
-	if ( socket < 0 || buf == NULL || t_msg == NULL )
+	int rc = 0;
+	int status = 0;
+	const char *p_body = NULL;
+	ZtErrCode e_code = ZT_ERR_INVALID_PARAMS;
+
+	if ( socket < 0 || buf == NULL || t_request == NULL )
 		return ERR_ARG_INVALID;
 
-	if ( strncmp( t_msg->method, "GET", 3 ) )
+	/* 1. Method Check */
+	if ( strncmp( t_request->method, "GET", 3 ) )
 	{
-		snprintf( res_buf, sizeof(res_buf),
-			"HTTP/1.1 405 Method Not Allowed\r\n"
-			"Content-Type: application/json\r\n"
-			"Content-Length: 34\r\n\r\n"
-			"{\"result\":\"fail\",\"reason\":\"GET only\"}" );
-		rc = write( socket, res_buf, strlen(res_buf) );
-		return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
+		status = 405;
+		e_code = ZT_ERR_METHOD_NOT_ALLOWED;
+		goto err_return;
 	}
 
 	/* URI에서 ?id= 파싱: /room?id=myroom */
-	p_val = strstr( t_msg->uri, "?id=" );
+	p_val = strstr( t_request->uri, "?id=" );
 	if ( p_val )
-		snprintf( room_id, sizeof(room_id), "%15s", p_val + 4 );
+		Get_Value_From_Body( p_body, ROOM_ID_KEY, &t_room.str_room_id, &len );
 
-	if ( room_id[0] == '\0' )
+	/* 3. Room Check */
+	if ( t_room.str_room_id[0] == '\0' )
 	{
-		snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"room_id required\"}" );
-	}
-	else
-	{
-		rc = ZT_REDIS_RoomGet( room_id, &t_room );
-		if ( rc == -1 )
-			snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"room not found\"}" );
-		else if ( rc != 0 )
-			snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"server error\"}" );
-		else
-			snprintf( json_body, sizeof(json_body), "{\"result\":\"ok\",\"room_id\":\"%s\"}", t_room.str_room_id );
+		status = 400;
+		e_code = ZT_ERR_INVALID_PARAMS;
+		goto err_return;
 	}
 
-	snprintf( res_buf, sizeof(res_buf),
-		"HTTP/1.1 200 OK\r\n"
-		"Content-Type: application/json\r\n"
-		"Content-Length: %d\r\n\r\n%s",
-		(int)strlen(json_body), json_body );
-	rc = write( socket, res_buf, strlen(res_buf) );
+	/* 4. Room Get From Redis */
+	rc = ZT_REDIS_RoomGet( t_room.str_room_id, &t_room );
+	if ( rc == -1 )
+	{
+		status = 404;
+		e_code = ZT_ERR_ROOM_NOT_FOUND;
+		goto err_return;
+	}
+	else if ( rc != 0 )
+	{
+		status = 500;
+		e_code = ZT_ERR_SERVER_ERROR;
+		goto err_return;
+	}	
+
+	/* 5. Response */
+	t_response = Generate_Response(t_request, 200);
+	Generate_Response_Body( &t_response, RESULT_SUCCESS, e_code, t_room.str_room_id );
+	rc = write( socket, t_response.t_response, strlen(t_response.t_response) );
+	return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
+
+err_return:
+	t_response = Generate_Response(t_request, status);
+	Generate_Response_Body( &t_response, RESULT_FAIL, e_code, NULL );
+	rc = write( socket, t_response.t_response, strlen(t_response.t_response) );
 	return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
 }
 
 /*=================================================
  * name : HDL_JoinRoom
  * return : SOCKET_OK / ERR_*
- * param : socket, buf(전체 HTTP 요청), t_msg
+ * param : socket, buf(전체 HTTP 요청), t_request
  * desc  : POST /room/join JSON body {"room_id":"xxx","password":"yyy"}
  *         room_id로 채팅방 조회 후 pw 검증, 일치하면 입장 허가
  ===================================================*/
-static int HDL_JoinRoom( int socket, const char *buf, ReqType_t *t_msg )
+ static int HDL_JoinRoom( int socket, const char *buf, ReqType_t *t_request )
 {
-	const char *p_body = NULL;
-	room_t t_room = {0};
-	room_t stored_room = {0};
-	char res_buf[BUF_MAX_LEN] = {0};
-	char json_body[256] = {0};
-	int rc;
-	const char *p_val = NULL;
+	user_t t_user = {0};
+	ResType_t t_response = {0};
 
-	if ( socket < 0 || buf == NULL || t_msg == NULL )
+	int rc = 0;
+	int status = 0;
+	const char *p_body = NULL;
+	ZtErrCode e_code = ZT_ERR_INVALID_PARAMS;
+
+	if ( socket < 0 || buf == NULL || t_request == NULL )
 		return ERR_ARG_INVALID;
 
-	if ( strncmp( t_msg->method, "POST", 4 ) )
+	/* 1. Method Check */
+	if ( strncmp( t_request->method, "POST", 4 ) )
 	{
-		snprintf( res_buf, sizeof(res_buf),
-			"HTTP/1.1 405 Method Not Allowed\r\n"
-			"Content-Type: application/json\r\n"
-			"Content-Length: 35\r\n\r\n"
-			"{\"result\":\"fail\",\"reason\":\"POST only\"}" );
-		rc = write( socket, res_buf, strlen(res_buf) );
-		return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
+		status = 405;
+		e_code = ZT_ERR_METHOD_NOT_ALLOWED;
+		goto err_return;
 	}
 
 	p_body = strstr( buf, "\r\n\r\n" );
@@ -462,95 +472,102 @@ static int HDL_JoinRoom( int socket, const char *buf, ReqType_t *t_msg )
 	else
 		p_body = buf;
 
-	p_val = strstr( p_body, "\"room_id\"" );
-	if ( p_val ) { p_val = strchr( p_val + 9, '"' ); if ( p_val ) { p_val++; sscanf( p_val, "%15[^\"]", t_room.str_room_id ); } }
-	p_val = strstr( p_body, "\"password\"" );
-	if ( p_val ) { p_val = strchr( p_val + 11, '"' ); if ( p_val ) { p_val++; sscanf( p_val, "%15[^\"]", t_room.str_pwd ); } }
+	/* 2. Body Parsing */
+	Get_Value_From_Body( p_body, ROOM_ID_KEY, &t_room.str_room_id, &len );
+	Get_Value_From_Body( p_body, PASSWORD_KEY, &t_room.str_pwd, &len );
 
+	/* 3. Room Check */
 	if ( t_room.str_room_id[0] == '\0' || t_room.str_pwd[0] == '\0' )
 	{
-		snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"invalid params\"}" );
-	}
-	else
-	{
-		rc = ZT_REDIS_RoomGet( t_room.str_room_id, &stored_room );
-		if ( rc == -1 )
-			snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"room not found\"}" );
-		else if ( rc != 0 )
-			snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"server error\"}" );
-		else if ( strcmp( stored_room.str_pwd, t_room.str_pwd ) != 0 )
-			snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"wrong password\"}" );
-		else
-			snprintf( json_body, sizeof(json_body), "{\"result\":\"ok\",\"room_id\":\"%s\"}", t_room.str_room_id );
+		status = 400;
+		e_code = ZT_ERR_INVALID_PARAMS;	
+		goto err_return;
 	}
 
-	snprintf( res_buf, sizeof(res_buf),
-		"HTTP/1.1 200 OK\r\n"
-		"Content-Type: application/json\r\n"
-		"Content-Length: %d\r\n\r\n%s",
-		(int)strlen(json_body), json_body );
-	rc = write( socket, res_buf, strlen(res_buf) );
+	/* 4. Room Get From Redis */
+	rc = ZT_REDIS_RoomGet( t_room.str_room_id, &stored_room );
+	if ( rc == -1 )
+	{
+		status = 404;
+		e_code = ZT_ERR_ROOM_NOT_FOUND;
+		goto err_return;
+	}
+	else if ( rc != 0 )
+	{
+		status = 500;
+		e_code = ZT_ERR_SERVER_ERROR;
+		goto err_return;
+	}
+	return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
+
+err_return:
+	t_response = Generate_Response(t_request, status);
+	Generate_Response_Body( &t_response, RESULT_FAIL, e_code, NULL );
+	rc = write( socket, t_response.t_response, strlen(t_response.t_response) );
 	return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
 }
 
 /*=================================================
  * name : HDL_ListRooms
  * return : SOCKET_OK / ERR_*
- * param : socket, buf(전체 HTTP 요청), t_msg
+ * param : socket, buf(전체 HTTP 요청), t_request
  * desc  : GET /rooms
  *         Redis에서 room:* 키를 스캔해서 room_id, creator_id(user_id) 리스트 반환
  *         {"result":"ok","rooms":[{"room_id":"r1","user_id":"u1"},...]}
  * ===================================================*/
-static int HDL_ListRooms( int socket, const char *buf, ReqType_t *t_msg )
+static int HDL_ListRooms( int socket, const char *buf, ReqType_t *t_request )
 {
-	room_t rooms[64] = {0};
-	char res_buf[BUF_MAX_LEN] = {0};
-	char json_body[1024] = {0};
-	int rc;
-	int i, n;
+	room_t t_room = {0};
+	ResType_t t_response = {0};
 
+	int rc = 0;
+	int status = 0;
+	const char *p_body = NULL;
+	ZtErrCode e_code = ZT_ERR_INVALID_PARAMS;
 	(void)buf;
 
-	if ( socket < 0 || t_msg == NULL )
+	if ( socket < 0 || buf == NULL || t_request == NULL )
 		return ERR_ARG_INVALID;
 
-	if ( strncmp( t_msg->method, "GET", 3 ) )
+	if ( strncmp( t_request->method, "GET", 3 ) )
 	{
-		snprintf( res_buf, sizeof(res_buf),
-			"HTTP/1.1 405 Method Not Allowed\r\n"
-			"Content-Type: application/json\r\n"
-			"Content-Length: 34\r\n\r\n"
-			"{\"result\":\"fail\",\"reason\":\"GET only\"}" );
-		rc = write( socket, res_buf, strlen(res_buf) );
-		return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
+		status = 405;
+		e_code = ZT_ERR_METHOD_NOT_ALLOWED;
+		goto err_return;
 	}
 
-	n = ZT_REDIS_RoomList( rooms, (size_t)(sizeof(rooms)/sizeof(rooms[0])) );
-	if ( n < 0 )
-	{
-		snprintf( json_body, sizeof(json_body), "{\"result\":\"fail\",\"reason\":\"server error\"}" );
-	}
+	p_body = strstr( buf, "\r\n\r\n" );
+	if ( p_body == NULL )
+		p_body = strstr( buf, "\n\n" );
+	if ( p_body )
+		p_body += ( strstr( buf, "\r\n\r\n" ) ? 4 : 2 );
 	else
+		p_body = buf;
+
+	rc = ZT_REDIS_RoomList( t_rooms, (size_t)(sizeof(t_rooms)/sizeof(t_rooms[0])) );
+	if ( rc < 0 )
 	{
-		int len = 0;
-		len += snprintf( json_body + len, sizeof(json_body) - len, "{\"result\":\"ok\",\"rooms\":[");
-		for ( i = 0; i < n && len < (int)sizeof(json_body) - 1; i++ )
-		{
-			len += snprintf( json_body + len, sizeof(json_body) - len,
-				"%s{\"room_id\":\"%s\",\"user_id\":\"%s\"}",
-				(i == 0 ? "" : ","),
-				rooms[i].str_room_id,
-				rooms[i].str_creator_id );
-		}
-		len += snprintf( json_body + len, sizeof(json_body) - len, "]}" );
+		status = 500;
+		e_code = ZT_ERR_SERVER_ERROR;
+		goto err_return;
+	}
+	else if ( rc != 0 )
+	{
+		status = 500;
+		e_code = ZT_ERR_SERVER_ERROR;
+		goto err_return;
 	}
 
-	snprintf( res_buf, sizeof(res_buf),
-		"HTTP/1.1 200 OK\r\n"
-		"Content-Type: application/json\r\n"
-		"Content-Length: %d\r\n\r\n%s",
-		(int)strlen(json_body), json_body );
-	rc = write( socket, res_buf, strlen(res_buf) );
+	/* 5. Response */
+	t_response = Generate_Response(t_request, 200);
+	Generate_Response_Body( &t_response, RESULT_SUCCESS, e_code, t_rooms );
+	rc = write( socket, t_response.t_response, strlen(t_response.t_response) );
+	return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
+
+err_return:
+	t_response = Generate_Response(t_request, status);
+	Generate_Response_Body( &t_response, RESULT_FAIL, e_code, NULL );
+	rc = write( socket, t_response.t_response, strlen(t_response.t_response) );
 	return ( rc < 0 ) ? ERR_SOCKET_WRITE : SOCKET_OK;
 }
 
@@ -561,8 +578,8 @@ static int HDL_ListRooms( int socket, const char *buf, ReqType_t *t_msg )
  ===================================================*/
 int HDL_SOCKET ( int epfd, int socket )
 {
-	ReqType_t t_msg = {0};
-    //memset( &tMsg, 0x00, sizeof(tMsg) );
+	ReqType_t t_request = {0};
+	ResType_t t_response = {0};
 	
     char parse[BUF_MAX_LEN] = {0};
 	char buf[BUF_MAX_LEN] = {0};
@@ -612,7 +629,7 @@ int HDL_SOCKET ( int epfd, int socket )
 		LOG_MSG("%s\n", buf);
 		fflush(stdout);
 
-		snprintf( parse, sizeof(parse), "%s", buf );
+		snprintf( t_request.body, sizeof(t_request.body), "%s", buf );
 
 		char *method = strtok( parse, " " );
 		char *uri = strtok( NULL, " " );
@@ -759,27 +776,38 @@ int HDL_ACCEPT( int socket, int epfd )
 	return SOCKET_OK;
 }
 
-void HDL_400( int socket )
+static int Get_Value_From_Body( const char *p_body, const char *p_key, char **p_offset, int *len )
 {
-	int rc = 0;
+	const char *p;
+	const char *p_start;
+	const char *p_end;
 
-	const char *msg = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n";
-	rc = write( socket, msg, strlen(msg) );
-	if( rc < 0 )
-	{
-		LOG_MSG("[HDL_400] write fail\n");
-	}
-}
+	if ( p_body == NULL || p_key == NULL || p_offset == NULL || len == NULL )
+		return ERR_ARG_INVALID;
 
-void HDL_500( int socket ) 
-{
-	int rc = 0;
+	p = strstr( p_body, p_key );
+	if ( !p )
+		return ERR_ARG_INVALID;
 
-	const char *msg = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n";
-	rc = write( socket, msg, strlen(msg) );
-	if( rc < 0 )
-	{
-		LOG_MSG("[HDL_500] write fail\n");
-	}
+	p = p + strlen( p_key );
+	p = strchr( p, ':' );
+	if ( !p )
+		return ERR_ARG_INVALID;
 
+	p++;
+	while ( *p == ' ' || *p == '\t' || *p == '\r' || *p == '\n' )
+		p++;
+	if ( *p != '"' )
+		return ERR_ARG_INVALID;
+
+	p++;
+	p_start = p;
+	p_end = strchr( p_start, '"' );
+	if ( !p_end || p_end < p_start )
+		return ERR_ARG_INVALID;
+
+	*p_offset = (char *)p_start;
+	*len = (int)( p_end - p_start );
+	
+	return SOCKET_OK;
 }

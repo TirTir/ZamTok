@@ -7,21 +7,22 @@ int CTX_Init( ZT_CTX_t *pt_ctx )
 	return SOCKET_OK;	
 }
 
+int CTX_Http_Free( ZT_CTX_t *pt_ctx )
+{
+    HttpCTX_t *pt_http_ctx = pt_ctx->pt_http_ctx;
+    while( pt_http_ctx != NULL )
+    {
+        HttpCTX_t *pt_next_ctx = pt_http_ctx->pt_next_ctx;
+        free(pt_http_ctx);
+    }
+}
+
 int CTX_Http_Insert( ZT_CTX_t *pt_ctx, const int client_fd, struct sockaddr_in t_client_addr )
 {
     int rc = 0;
 
-	if( pt_ctx == NULL )
-    {
-        LOG_ERR("CTX is NULL\n");
+    if( pt_ctx == NULL || client_fd < 0 )
         return ERR_ARG_INVALID;
-    }
-
-    if( client_fd < 0 )
-    {
-        LOG_ERR("Client Info is NULL\n");
-        return ERR_ARG_INVALID;
-    }
 
     /* Full Check */
     if( pt_ctx->client_cnt ==  MAX_CLIENTS )
@@ -41,10 +42,12 @@ int CTX_Http_Insert( ZT_CTX_t *pt_ctx, const int client_fd, struct sockaddr_in t
     pt_new_ctx->client_fd = client_fd;
     memcpy( &pt_new_ctx->t_client_addr, &t_client_addr, sizeof(struct sockaddr_in) );
 
+    /* 1. Mutex Lock */
     rc = pthread_mutex_lock( &pt_ctx->mutex );
     if( rc < 0 )
     {
         LOG_ERR("Mutex Lock Fail");
+        free(pt_new_ctx);
         return ERR_CTX_LOCK;
     }
 

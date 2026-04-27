@@ -4,11 +4,14 @@
 #include "ZT_ctx.h"
 #include "ZT_Inc.h"
 
-int HDL_HEADER( char *p_header, char *p_buf, int status, ReqType_t *t_msg );
-int HDL_HEADER_MIME( char *p_content_type, int size, const char *p_uri );
-int HDL_SOCKET ( int epfd, int socket );
-int HDL_ACCEPT( int socket, int epfd );
-void HDL_400( int socket );
-void HDL_500( int socket );
+void HDL_400 ( int socket );
+void HDL_500 ( int socket );
+
+static int HDL_Join( ReqType_t *t_request );
+static int HDL_Login( ReqType_t *t_request );
+static int HDL_CreateRoom( ReqType_t *t_request );
+static int HDL_SearchRoom( ReqType_t *t_request );
+static int HDL_JoinRoom( ReqType_t *t_request );
+static int HDL_ListRooms( ReqType_t *t_request );
 
 #endif

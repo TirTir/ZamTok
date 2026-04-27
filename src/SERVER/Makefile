@@ -12,6 +12,7 @@ SRCS = ZT_main.c \
        ZT_ctx.c  \
        ZT_evt.c  \
        ZT_hdl.c  \
+       ZT_msg.c  \
        ZT_redis.c
 
 OBJDIR := $(RELEASE_DIR)

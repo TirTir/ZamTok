@@ -6,7 +6,7 @@ MYSQL *conn;
 #define USER yjkim
 #define PASSWORD 1234
 
-int ZT_DB_CONNECT()
+int db_connect()
 {
 	int rc = -1;
 
@@ -29,9 +29,7 @@ int ZT_DB_CONNECT()
 	return SOCKET_OK;
 }
 
-#define SELECT_USER "SELECT * FROM user WHERE userid=?;"
-
-int ZT_DB_QUERY()
+int db_query()
 {
 	
 }

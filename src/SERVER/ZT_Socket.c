@@ -1,11 +1,8 @@
 #include "ZT_Inc.h"
-#include "ZT_log.h"
-#include "ZT_log_fmt.h"
-#include "ZT_hdl.h"
 
 extern unsigned char g_client_fd[MAX_CLIENTS/8];
 
-int SET_NONBLOCKING (int socket )
+int socket_set_nonblocking(int socket )
 {
 	int flags = -1;
 	int rc = 0;
@@ -34,7 +31,7 @@ int SET_NONBLOCKING (int socket )
 	return SOCKET_OK;
 }
 
-int SOCKET_Bind ( int socket, int port )
+int socket_bind( int socket, int port )
 {
 	int rc = 0;
 	struct sockaddr_in sin;
@@ -73,7 +70,7 @@ int SOCKET_Bind ( int socket, int port )
 
 }
 
-int SOCKET_Init ( int *pSocket )
+int socket_init( int *pSocket )
 {
 	int rc = 0;
 	int fd = -1, opt = 1;
@@ -107,7 +104,7 @@ int SOCKET_Init ( int *pSocket )
 
 }
 
-int SOCKET_Accept ( int socket, int epfd )
+int socket_accept( int socket, int epfd )
 {
 	struct sockaddr_in tClientAddr;
 	socklen_t addrlen = sizeof(tClientAddr);
@@ -116,15 +113,9 @@ int SOCKET_Accept ( int socket, int epfd )
 	int nClientFD = -1;
 	int rc = 0;
 
-	if ( socket < 0 )
+	if ( socket < 0 || epfd < 0 )
 	{
-		LOG_MSG("[SOCKET_Accept] Socket FD is Wrong\n");
-		return ERR_ARG_INVALID;
-	}
-
-	if ( epfd < 0 )
-	{
-		LOG_MSG("[SOCKET_Accept] Epoll FD is Wrong\n");
+		LOG_MSG("[SOCKET_Accept] Socket FD or Epoll FD is Wrong <%d:%s>\n", errno, strerror(errno));
 		return ERR_ARG_INVALID;
 	}
 
@@ -132,9 +123,6 @@ int SOCKET_Accept ( int socket, int epfd )
 	{
 		LOG_FMT_CENTER("Connecting");
 		LOG_MSG("FD=%d from %s:%d\n", nClientFD, inet_ntoa(tClientAddr.sin_addr), ntohs(tClientAddr.sin_port));
-
-		/* Edge Trigger */
-		/* Client Socket Event ADD */
 		
         tEv.events = EPOLLIN | EPOLLET;
 		tEv.data.fd = nClientFD;
@@ -153,23 +141,41 @@ int SOCKET_Accept ( int socket, int epfd )
 	return SOCKET_OK;
 }
 
-int EventLoop ( int socket )
+int socket_send( int socket, const char *buf, int len )
 {
-	/* tEv: fd 단일 등록 -> epoll_ctl()
-	   tEvs: fd에서 발생한 이벤트들 -> epoll_wait() */
+	int rc = 0;
+	
+	if( socket < 0 || buf == NULL || len <= 0 )
+	{
+		LOG_MSG("[SOCKET_Send] Socket FD or Buffer is Wrong\n");
+		return ERR_ARG_INVALID;
+	}
+
+	rc = write( socket, buf, len );
+	if( rc < 0 )
+	{
+		LOG_ERR("[SOCKET_Send] Write Fail <%d:%s>\n", errno, strerror(errno));
+		return ERR_SOCKET_WRITE;
+	}
+	
+	LOG_MSG("===============Send Response===============\n");
+	LOG_MSG("===============Send Response===============\n");
+	LOG_MSG("%s\n", buf);
+	LOG_MSG("===============Send Response===============\n");
+	LOG_MSG("===============Send Response===============\n");
+
+	return rc;
+}
+
+int socket_event_loop( int socket )
+{
 	struct epoll_event tEv, tEvents[MAX_EVENTS];
 
 	int fd = -1, epfd;
 	int i, n, rc = 0;
 
-	if ( socket < 0 )
-	{
-		LOG_MSG("[EventLoop] Socket FD is Wrong\n");
-		return ERR_ARG_INVALID;
-	}
-
 	/* create epoll instance */
-	
+
 	epfd = epoll_create1(0);
 	if( epfd < 0 )
 	{
@@ -189,7 +195,7 @@ int EventLoop ( int socket )
 		goto close_event;
 	}
 
-	rc = SET_NONBLOCKING( socket );
+	rc = socket_set_nonblocking( socket );
 	if( rc < 0 )
 	{
 		LOG_MSG("[EventLoop] Set Nonblocking Fail\n");
@@ -219,7 +225,7 @@ int EventLoop ( int socket )
 			if( fd == socket )
 			{
 				/* New Clients Connection */
-				rc = HDL_ACCEPT( socket, epfd );
+				rc = hdl_accept( socket, epfd );
 				if( rc < 0 )
 				{
 					LOG_MSG("[EventLoop] HDL_ACCEPT fail\n");
@@ -230,7 +236,7 @@ int EventLoop ( int socket )
 			{		
 				if( tEvents[i].events & EPOLLIN )
 				{
-					rc = HDL_SOCKET ( epfd, fd );
+					rc = hdl_socket( epfd, fd );
 					if( rc != SOCKET_OK )
 					{
 						/* 클라이언트 끊김/잘못된 요청 → 해당 fd만 정리하고 서버는 계속 동작 */

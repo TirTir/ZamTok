@@ -8,12 +8,13 @@ RELEASE_DIR ?= release
 TARGET_NAME := $(notdir $(patsubst %/,%,$(MKFDIR)))
 RB_RELEASE_DIR := $(MKFDIR)../release
 
-SRCS = ZT_main.c \
-       ZT_ctx.c  \
-       ZT_evt.c  \
-       ZT_hdl.c  \
-       ZT_msg.c  \
-       ZT_redis.c
+SRCS = ZT_Main.c \
+       ZT_Ctx.c  \
+	   ZT_Socket.c
+	   ZT_API.c  \
+       ZT_Hdl.c  \
+       ZT_Msg.c  \
+       ZT_Redis.c
 
 OBJDIR := $(RELEASE_DIR)
 OBJS = $(SRCS:%.c=$(OBJDIR)/%.o)

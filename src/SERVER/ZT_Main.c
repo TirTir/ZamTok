@@ -29,39 +29,39 @@ int main( int argc, char **argv )
 		int redis_port = redis_port_str ? atoi(redis_port_str) : 6379;
 		if (!redis_host) redis_host = "127.0.0.1";
 		LOG_MSG("[INFO] Redis: %s:%d\n", redis_host, redis_port);
-		rc = ZT_REDIS_Connect( redis_host, redis_port );
+		rc = redis_connect( redis_host, redis_port );
 		if ( rc != 0 )
 			LOG_MSG("[WARN] Redis connect fail (join/login will fail)\n");
 		else
 			LOG_MSG("[INFO] Redis connected\n");
 	}
 
-	rc = SOCKET_Init( &socket );
+	rc = socket_init( &socket );
 	if ( rc < 0 ) {
 		LOG_MSG("[ERROR] Socket_Init Fail\n");
 		goto close_socket;
 	}
 
-	rc = SOCKET_Bind( socket, port );
+	rc = socket_bind( socket, port );
 	if ( rc < 0 ) {
 		LOG_MSG("[ERROR] Socket_Bind Fail\n");
 		goto close_socket;
 	}
 
-	rc = CTX_Init( &gt_ctx_info );
+	rc = ctx_init( &gt_ctx_info );
 	if ( rc < 0 ) {
 		LOG_MSG("[ERROR] CTX_Init Fail\n");
 		goto close_socket;
 	}
 
-	rc = EventLoop( socket );
+	rc = socket_event_loop( socket );
 	if ( rc < 0 ) {
 		LOG_MSG("[ERROR] EventLoop Fail\n");
 		goto close_socket;
 	}
 
 close_socket:
-	ZT_REDIS_Disconnect();
+	redis_disconnect();
 	if ( socket >= 0 )
 		close( socket );
 

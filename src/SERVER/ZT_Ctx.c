@@ -1,13 +1,13 @@
 
 #include "ZT_ctx.h"
 
-int CTX_Init( ZT_CTX_t *pt_ctx )
+int ctx_init( ZT_CTX_t *pt_ctx )
 {
 	memset(pt_ctx, 0x00, sizeof(ZT_CTX_t));
 	return SOCKET_OK;	
 }
 
-int CTX_Http_Free( ZT_CTX_t *pt_ctx )
+int ctx_http_free( ZT_CTX_t *pt_ctx )
 {
     HttpCTX_t *pt_http_ctx = pt_ctx->pt_http_ctx;
     while( pt_http_ctx != NULL )
@@ -17,7 +17,7 @@ int CTX_Http_Free( ZT_CTX_t *pt_ctx )
     }
 }
 
-int CTX_Http_Insert( ZT_CTX_t *pt_ctx, const int client_fd, struct sockaddr_in t_client_addr )
+int ctx_http_insert( ZT_CTX_t *pt_ctx, const int client_fd, struct sockaddr_in t_client_addr )
 {
     int rc = 0;
 

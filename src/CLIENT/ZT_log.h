@@ -2,7 +2,7 @@
 #define _ZT_LOG_H_
 
 #include <stdio.h>
-#include "ZT_log_ts.h"
+#include "zt_log_ts.h"
 
 #define LOG_ERR(fmt, ...)  do { \
     ZT_LOG_TIMESTAMP(); \
@@ -14,9 +14,9 @@
     printf("[INFO]  (%s:%d) " fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
 } while (0)
 
-#define LOG_MSG(fmt, ...) do { 
-//    ZT_LOG_TIMESTAMP(); 
-    printf(fmt, ##__VA_ARGS__); 
+#define LOG_MSG(fmt, ...) do { \
+    /* ZT_LOG_TIMESTAMP(); */ \
+    printf(fmt, ##__VA_ARGS__); \
 } while (0)
 
 #endif

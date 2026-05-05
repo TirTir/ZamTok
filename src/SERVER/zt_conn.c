@@ -26,7 +26,7 @@ int db_connect()
 		return DB_ERROR;
 	}
 
-	return SOCKET_OK;
+	return ZT_RC_OK;
 }
 
 int db_query()

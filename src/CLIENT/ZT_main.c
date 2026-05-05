@@ -1,8 +1,8 @@
-#include "ZT_Inc.h"
-#include "ZT_ctx.h"
-#include "ZT_sock.h"
-#include "ZT_evt.h"
-#include "ZT_ctrl.h"
+#include "zt_common.h"
+#include "zt_ctx.h"
+#include "zt_sock.h"
+#include "zt_evt.h"
+#include "zt_ctrl.h"
 
 ZT_CTX_t gt_ctx_info;
 unsigned char g_client_fd[MAX_CLIENTS/8];
@@ -29,13 +29,13 @@ int main(int argc, char **argv)
 	printf("[INFO] Connecting to %s:%d\n", host, port);
 
 	rc = SOCKET_Init(&sockfd);
-	if (rc < 0) {
+	if (rc != ZT_RC_OK) {
 		printf("[ERROR] SOCKET_Init Fail\n");
 		goto close_socket;
 	}
 
 	rc = SOCKET_Connect(sockfd, host, port);
-	if (rc < 0) {
+	if (rc != ZT_RC_OK) {
 		printf("[ERROR] SOCKET_Connect Fail\n");
 		goto close_socket;
 	}
@@ -47,7 +47,7 @@ int main(int argc, char **argv)
 	}
 
 	rc = EventLoop(sockfd, 1);  /* 1 = client mode (no accept) */
-	if (rc < 0) {
+	if (rc != ZT_RC_OK) {
 		printf("[ERROR] EventLoop Fail\n");
 		goto close_socket;
 	}

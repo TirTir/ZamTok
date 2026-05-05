@@ -1,9 +1,7 @@
-#include "ZT_Inc.h"
-#include "ZT_redis.h"
-#include "ZT_log.h"
+#include "zt_inc.h"
 
-ZT_CTX_t gt_ctx_info;
-unsigned char g_client_fd[MAX_CLIENTS/8];
+zt_server_ctx_t g_server_ctx;
+unsigned char g_client_fd[MAX_CLIENTS / 8];
 
 int main( int argc, char **argv )
 {
@@ -29,7 +27,7 @@ int main( int argc, char **argv )
 		int redis_port = redis_port_str ? atoi(redis_port_str) : 6379;
 		if (!redis_host) redis_host = "127.0.0.1";
 		LOG_MSG("[INFO] Redis: %s:%d\n", redis_host, redis_port);
-		rc = redis_connect( redis_host, redis_port );
+		rc = redis_connect(redis_host, redis_port);
 		if ( rc != 0 )
 			LOG_MSG("[WARN] Redis connect fail (join/login will fail)\n");
 		else
@@ -48,7 +46,7 @@ int main( int argc, char **argv )
 		goto close_socket;
 	}
 
-	rc = ctx_init( &gt_ctx_info );
+	rc = ctx_init(&g_server_ctx);
 	if ( rc < 0 ) {
 		LOG_MSG("[ERROR] CTX_Init Fail\n");
 		goto close_socket;

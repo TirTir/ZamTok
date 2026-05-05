@@ -1,10 +1,10 @@
-#include "ZT_Inc.h"
-#include "ZT_chat.h"
-#include "ZT_sock.h"
+#include "zt_common.h"
+#include "zt_chat.h"
+#include "zt_sock.h"
 
 int user_pool[USER_POOL_MAX_COUNT];
 
-int Join(int socket, const user_t *pt_user)
+int chat_join(int socket, const user_t *user)
 {
 	int len = 0;
 	char req_buf[1024] = {0};
@@ -12,21 +12,21 @@ int Join(int socket, const user_t *pt_user)
 
 	snprintf(json_body, sizeof(json_body),
 		"{\"user_id\": \"%s\", \"name\": \"%s\", \"password\": \"%s\"}",
-		pt_user->str_user_id, pt_user->str_name, pt_user->str_pwd);
+		user->user_id, user->name, user->password);
 
 	len = snprintf(req_buf, sizeof(req_buf), HTTP_REQUEST_FMT,
 		"POST", "/join", "localhost:8080", strlen(json_body), json_body);
 
 	if (len <= 0 )
 	{
-		printf("[Join] Request build fail\n");
+		printf("[chat_join] Request build fail\n");
 		return -1;
 	}
 
 	return SOCKET_SendRequestBuf(socket, req_buf, (size_t)len);
 }
 
-int Login(int socket, const char *str_user_id, const char *str_password)
+int chat_login(int socket, const char *user_id, const char *password)
 {
 	int len = 0;
 	char req_buf[1024] = {0};
@@ -34,90 +34,90 @@ int Login(int socket, const char *str_user_id, const char *str_password)
 
 	snprintf(json_body, sizeof(json_body),
 		"{\"user_id\": \"%s\", \"password\": \"%s\"}",
-		str_user_id, str_password);
+		user_id, password);
 
 	len = snprintf(req_buf, sizeof(req_buf), HTTP_REQUEST_FMT,
 		"POST", "/login", "localhost:8080", strlen(json_body), json_body);
 
 	if (len <= 0 || (size_t)len >= sizeof(req_buf)) {
-		printf("[Login] Request build fail\n");
+		printf("[chat_login] Request build fail\n");
 		return -1;
 	}
 
 	return SOCKET_SendRequestBuf(socket, req_buf, (size_t)len);
 }
 
-int CreateRoom(int socket, const char *str_room_id, const char *str_password, const char *str_user_id)
+int chat_create_room(int socket, const char *room_id, const char *password, const char *user_id)
 {
 	int len = 0;
 	char req_buf[1024] = {0};
 	char json_body[256] = {0};
 
-	if (str_user_id && str_user_id[0] != '\0') {
+	if (user_id && user_id[0] != '\0') {
 		snprintf(json_body, sizeof(json_body),
 			"{\"room_id\": \"%s\", \"password\": \"%s\", \"user_id\": \"%s\"}",
-			str_room_id, str_password, str_user_id);
+			room_id, password, user_id);
 	} else {
 		snprintf(json_body, sizeof(json_body),
 			"{\"room_id\": \"%s\", \"password\": \"%s\"}",
-			str_room_id, str_password);
+			room_id, password);
 	}
 
 	len = snprintf(req_buf, sizeof(req_buf), HTTP_REQUEST_FMT,
 		"POST", "/room", "localhost:8080", strlen(json_body), json_body);
 
 	if (len <= 0 || (size_t)len >= sizeof(req_buf)) {
-		printf("[CreateRoom] Request build fail\n");
+		printf("[chat_create_room] Request build fail\n");
 		return -1;
 	}
 
 	return SOCKET_SendRequestBuf(socket, req_buf, (size_t)len);
 }
 
-int SearchRoom(int socket, const char *str_room_id)
+int chat_search_room(int socket, const char *room_id)
 {
 	char path[128] = {0};
 
-	if (socket < 0 || str_room_id == NULL) {
-		printf("[SearchRoom] Invalid argument\n");
+	if (socket < 0 || room_id == NULL) {
+		printf("[chat_search_room] Invalid argument\n");
 		return -1;
 	}
 
-	snprintf(path, sizeof(path), "/room?id=%s", str_room_id);
+	snprintf(path, sizeof(path), "/room?id=%s", room_id);
 
-	return SOCKET_SendHttpRequest(socket, "localhost", 8080, "GET", path);
+	return SOCKET_SendHttpRequest(socket, "localhost", "GET", path);
 }
 
-int ListRooms(int socket)
+int chat_list_rooms(int socket)
 {
 	if (socket < 0) {
-		printf("[ListRooms] Invalid socket\n");
+		printf("[chat_list_rooms] Invalid socket\n");
 		return -1;
 	}
 
-	return SOCKET_SendHttpRequest(socket, "localhost", 8080, "GET", "/rooms");
+	return SOCKET_SendHttpRequest(socket, "localhost", "GET", "/rooms");
 }
 
-int JoinRoom(int socket, const char *str_room_id, const char *str_password)
+int chat_join_room(int socket, const char *room_id, const char *password)
 {
 	int len = 0;
 	char req_buf[1024] = {0};
 	char json_body[256] = {0};
 
-	if (socket < 0 || str_room_id == NULL || str_password == NULL) {
-		printf("[JoinRoom] Invalid argument\n");
+	if (socket < 0 || room_id == NULL || password == NULL) {
+		printf("[chat_join_room] Invalid argument\n");
 		return -1;
 	}
 
 	snprintf(json_body, sizeof(json_body),
 		"{\"room_id\": \"%s\", \"password\": \"%s\"}",
-		str_room_id, str_password);
+		room_id, password);
 
 	len = snprintf(req_buf, sizeof(req_buf), HTTP_REQUEST_FMT,
 		"POST", "/room/join", "localhost:8080", strlen(json_body), json_body);
 
 	if (len <= 0 || (size_t)len >= sizeof(req_buf)) {
-		printf("[JoinRoom] Request build fail\n");
+		printf("[chat_join_room] Request build fail\n");
 		return -1;
 	}
 

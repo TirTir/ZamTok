@@ -1,8 +1,8 @@
-#include "ZT_Inc.h"
-#include "ZT_ctrl.h"
-#include "ZT_sock.h"
-#include "ZT_log.h"
-#include "ZT_log_fmt.h"
+#include "zt_common.h"
+#include "zt_ctrl.h"
+#include "zt_sock.h"
+#include "zt_log.h"
+#include "zt_log_fmt.h"
 #include <stdio.h>
 #include <strings.h>
 #include <pthread.h>
@@ -52,11 +52,11 @@ void CTRL_proc(int argc, char **argv)
 			LOG_MSG("[signup] Usage: signup <user_id> <name> <password>\n");
 			return;
 		}
-		snprintf(t_user.str_user_id, sizeof(t_user.str_user_id), "%.15s", argv[1]);
-		snprintf(t_user.str_name, sizeof(t_user.str_name), "%.15s", argv[2]);
-		snprintf(t_user.str_pwd, sizeof(t_user.str_pwd), "%.15s", argv[3]);
+		snprintf(t_user.user_id, sizeof(t_user.user_id), "%.15s", argv[1]);
+		snprintf(t_user.name, sizeof(t_user.name), "%.15s", argv[2]);
+		snprintf(t_user.password, sizeof(t_user.password), "%.15s", argv[3]);
 
-		rc = Join(g_socket_fd, &t_user);
+		rc = chat_join(g_socket_fd, &t_user);
 		if (rc == 0)
 			LOG_MSG("[signup] Join request sent\n");
 		else
@@ -78,7 +78,7 @@ void CTRL_proc(int argc, char **argv)
 			return;
 		}
 
-		rc = Login(g_socket_fd, argv[1], argv[2]);
+		rc = chat_login(g_socket_fd, argv[1], argv[2]);
 		if (rc == 0) {
 			LOG_MSG("[login] Login request sent\n");
 			snprintf(g_login_user_id, sizeof(g_login_user_id), "%.15s", argv[1]);
@@ -107,7 +107,7 @@ void CTRL_proc(int argc, char **argv)
 			return;
 		}
 
-		rc = CreateRoom(g_socket_fd, argv[1], argv[2], g_login_user_id);
+		rc = chat_create_room(g_socket_fd, argv[1], argv[2], g_login_user_id);
 		if (rc == 0)
 			LOG_MSG("[create] Create room request sent\n");
 		else
@@ -129,7 +129,7 @@ void CTRL_proc(int argc, char **argv)
 			return;
 		}
 
-		rc = JoinRoom(g_socket_fd, argv[1], argv[2]);
+		rc = chat_join_room(g_socket_fd, argv[1], argv[2]);
 		if (rc == 0)
 			LOG_MSG("[enter] Enter room request sent\n");
 		else
@@ -146,7 +146,7 @@ void CTRL_proc(int argc, char **argv)
 			return;
 		}
 
-		rc = ListRooms(g_socket_fd);
+		rc = chat_list_rooms(g_socket_fd);
 		if (rc == 0)
 			LOG_MSG("[list] Room list request sent\n");
 		else

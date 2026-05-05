@@ -1,260 +1,265 @@
-#include "ZT_Inc.h"
-#include "ZT_redis.h"
-#include "ZT_log.h"
-#include <hiredis/hiredis.h>
-#include <time.h>
+#include "zt_inc.h"
 
-static redisContext *g_redis = NULL;
+static redisContext *g_redis_ctx = NULL;
 
-int ZT_REDIS_Connect(const char *host, int port)
+int redis_connect(const char *str_host, int i_port)
 {
-	if (g_redis != NULL) {
-		redisFree(g_redis);
-		g_redis = NULL;
+	if (g_redis_ctx != NULL) {
+		redisFree(g_redis_ctx);
+		g_redis_ctx = NULL;
 	}
-	if (host == NULL)
-		host = "127.0.0.1";
-	if (port <= 0)
-		port = 6379;
 
-	g_redis = redisConnect(host, port);
-	if (g_redis == NULL || g_redis->err) {
-		if (g_redis)
-			LOG_ERR("[ZT_REDIS] connect fail: %s\n", g_redis->errstr);
+	/* default host and port */
+	if (str_host == NULL)
+		str_host = "127.0.0.1";
+	if (i_port <= 0)
+		i_port = 6379;
+
+	/* redis library connect */
+	g_redis_ctx = redisConnect(str_host, i_port);
+	
+	/* connect fail */
+	/* if connect fail, free redis context and return error */
+	if (g_redis_ctx == NULL || g_redis_ctx->err) {
+		if (g_redis_ctx)
+			LOG_MSG("[redis] connect fail: %s\n", g_redis_ctx->errstr);
 		else
-			LOG_ERR("[ZT_REDIS] connect fail: out of memory\n");
-		if (g_redis) {
-			redisFree(g_redis);
-			g_redis = NULL;
-		}
-		return -1;
+			LOG_MSG("[redis] connect fail: out of memory\n");
+
+		goto err_return;
 	}
-	return 0;
+
+	return ZT_RC_OK;
+
+err_return:
+	if (g_redis_ctx) {
+		redis_disconnect();
+	}
+	return ZT_RC_REDIS;
 }
 
-void ZT_REDIS_Disconnect(void)
+void redis_disconnect(void)
 {
-	if (g_redis) {
-		redisFree(g_redis);
-		g_redis = NULL;
+	if (g_redis_ctx) {
+		redisFree(g_redis_ctx);
+		g_redis_ctx = NULL;
 	}
 }
 
-#define USER_KEY_FMT "user:%s"
-#define ROOM_KEY_FMT "room:%s"
-#define ROOM_KEY_PATTERN "room:*"
-
-int ZT_REDIS_UserSave(const user_t *pt_user)
+int redis_user_save(const user_t *user)
 {
-	redisReply *reply = NULL;
+	redisReply *pt_reply = NULL;
 
-	char key[64];
-	char created[32];
+	char str_key[KEY_MAX_LEN];
+	char str_created[CREATED_MAX_LEN];
 
-	if (g_redis == NULL || pt_user == NULL || pt_user->str_user_id[0] == '\0')
-		return -2;
+	if (g_redis_ctx == NULL || user == NULL)
+		return ZT_RC_ARG_INVALID;
 
-	snprintf(key, sizeof(key), USER_KEY_FMT, pt_user->str_user_id);
+	snprintf(str_key, sizeof(str_key), USER_KEY_FMT, user->user_id);
+	snprintf(str_created, sizeof(str_created), "%ld", (long)time(NULL));
 
-	reply = redisCommand(g_redis, "EXISTS %s", key);
-	if (reply == NULL || reply->type == REDIS_REPLY_ERROR) {
-		if (reply) freeReplyObject(reply);
-		return -2;
-	}
-	if (reply->integer == 1) {
-		freeReplyObject(reply);
-		return -1; /* already exists */
-	}
+	pt_reply = redisCommand(g_redis_ctx, REDIS_USER_SAVE_CMD, str_key, user->name,
+				user->password, str_created);
 
-	freeReplyObject(reply);
-
-	snprintf(created, sizeof(created), "%ld", (long)time(NULL));
-
-	reply = redisCommand(g_redis, "HSET %s name %s pwd %s created_at %s",
-		key, pt_user->str_name, pt_user->str_pwd, created);
-
-	if (reply == NULL || reply->type == REDIS_REPLY_ERROR) {
-		if (reply) freeReplyObject(reply);
-		return -2;
+	if (pt_reply == NULL || pt_reply->type == REDIS_REPLY_ERROR) {
+		if (pt_reply)
+			freeReplyObject(pt_reply);
+		return ZT_RC_REDIS;
 	}
 
-	LOG_INFO("[ZT_REDIS] user save: %s, name: %s, pwd: %s, created: %s\n", pt_user->str_user_id, pt_user->str_name, pt_user->str_pwd, created);
-	
-	freeReplyObject(reply);
-	return 0;
+	LOG_MSG("[redis] user save: %s, name: %s, pwd: %s, created: %s\n", user->user_id,
+		 user->name, user->password, str_created);
+
+	freeReplyObject(pt_reply);
+
+	return ZT_RC_OK;
 }
 
-int ZT_REDIS_UserGet(const char *user_id, user_t *out_user)
+int redis_user_get(const char *user_id, user_t *out_user)
 {
-	redisReply *reply = NULL;
-	char key[64];
+	redisReply *pt_reply = NULL;
+	char str_key[KEY_MAX_LEN];
 
-	if (g_redis == NULL || user_id == NULL || out_user == NULL)
-		return -2;
-	
+	if (g_redis_ctx == NULL || user_id == NULL || out_user == NULL)
+		return ZT_RC_ARG_INVALID;
+
 	memset(out_user, 0, sizeof(*out_user));
 
-	snprintf(key, sizeof(key), USER_KEY_FMT, user_id);
+	snprintf(str_key, sizeof(str_key), USER_KEY_FMT, user_id);
 
-	reply = redisCommand(g_redis, "HMGET %s pwd name", key);
-	if (reply == NULL || reply->type == REDIS_REPLY_ERROR) {
-		if (reply) freeReplyObject(reply);
-		return -2;
+	pt_reply = redisCommand(g_redis_ctx, REDIS_USER_GET_CMD, str_key);
+	if (pt_reply == NULL || pt_reply->type == REDIS_REPLY_ERROR) {
+		if (pt_reply)
+			freeReplyObject(pt_reply);
+		return ZT_RC_REDIS;
 	}
-	if (reply->type != REDIS_REPLY_ARRAY || reply->elements < 2
-		|| reply->element[0]->type == REDIS_REPLY_NIL
-		|| reply->element[0]->str == NULL) {
-		freeReplyObject(reply);
-		return -1; /* not found */
+	if (pt_reply->type != REDIS_REPLY_ARRAY || pt_reply->elements < 2
+	    || pt_reply->element[0]->type == REDIS_REPLY_NIL
+	    || pt_reply->element[0]->str == NULL) {
+		freeReplyObject(pt_reply);
+		return ZT_RC_REDIS;
 	}
 
-	snprintf(out_user->str_user_id, sizeof(out_user->str_user_id), "%s", user_id);
-	snprintf(out_user->str_pwd,     sizeof(out_user->str_pwd),     "%s", reply->element[0]->str);
-	
-	if (reply->element[1]->type != REDIS_REPLY_NIL && reply->element[1]->str != NULL)
-		snprintf(out_user->str_name, sizeof(out_user->str_name), "%s", reply->element[1]->str);
-	
-	freeReplyObject(reply);
-	LOG_INFO("[ZT_REDIS] user get: %s, pwd: %s, name: %s\n", user_id, out_user->str_pwd, out_user->str_name);
-	return 0;
+	snprintf(out_user->user_id, sizeof(out_user->user_id), "%s", user_id);
+	snprintf(out_user->password, sizeof(out_user->password), "%s", pt_reply->element[0]->str);
+
+	if (pt_reply->element[1]->type != REDIS_REPLY_NIL && pt_reply->element[1]->str != NULL)
+		snprintf(out_user->name, sizeof(out_user->name), "%s", pt_reply->element[1]->str);
+
+	freeReplyObject(pt_reply);
+	LOG_MSG("[redis] user get: %s, pwd: %s, name: %s\n", user_id, out_user->password,
+		 out_user->name);
+	return ZT_RC_OK;
 }
 
-int ZT_REDIS_RoomSave(const room_t *pt_room)
+int redis_room_save(const room_t *room)
 {
-	redisReply *reply = NULL;
+	redisReply *pt_reply = NULL;
 
-	char key[64];
-	char created[32];
+	char str_key[KEY_MAX_LEN];
+	char str_created[CREATED_MAX_LEN];
 
-	if (g_redis == NULL || pt_room == NULL || pt_room->str_room_id[0] == '\0')
-		return -2;
+	if (g_redis_ctx == NULL || room == NULL || room->room_id[0] == '\0')
+		return ZT_RC_ARG_INVALID;
 
-	snprintf(key, sizeof(key), ROOM_KEY_FMT, pt_room->str_room_id);
+	snprintf(str_key, sizeof(str_key), ROOM_KEY_FMT, room->room_id);
 
-	/* 중복 방 id 체크 */
-	reply = redisCommand(g_redis, "EXISTS %s", key);
-	if (reply == NULL || reply->type == REDIS_REPLY_ERROR) 
-	{
-		if (reply) freeReplyObject(reply);
-		return -2;
+	pt_reply = redisCommand(g_redis_ctx, REDIS_ROOM_SAVE_CMD, str_key);
+	if (pt_reply == NULL || pt_reply->type == REDIS_REPLY_ERROR) {
+		if (pt_reply)
+			freeReplyObject(pt_reply);
+		return ZT_RC_REDIS;
 	}
 
-	if (reply->integer == 1) 
-	{
-		freeReplyObject(reply);
-		return -1; /* already exists */
+	if (pt_reply->integer == 1) {
+		freeReplyObject(pt_reply);
+		return ZT_RC_REDIS;
 	}
 
-	freeReplyObject(reply);
+	freeReplyObject(pt_reply);
 
-	snprintf(created, sizeof(created), "%ld", (long)time(NULL));
+	snprintf(str_created, sizeof(str_created), "%ld", (long)time(NULL));
 
-	reply = redisCommand(g_redis, "HSET %s pwd %s created_at %s creator_id %s",
-		key, pt_room->str_pwd, created, pt_room->str_creator_id);
+	pt_reply = redisCommand(g_redis_ctx, REDIS_ROOM_SAVE_CMD, str_key, room->password,
+				str_created, room->creator_id);
 
-	if (reply == NULL || reply->type == REDIS_REPLY_ERROR) 
-	{
-		if (reply) freeReplyObject(reply);
-		return -2;
+	if (pt_reply == NULL || pt_reply->type == REDIS_REPLY_ERROR) {
+		if (pt_reply)
+			freeReplyObject(pt_reply);
+		return ZT_RC_REDIS;
 	}
 
-	LOG_INFO("[ZT_REDIS] room save: %s, pwd: %s, created: %s, creator_id: %s\n", pt_room->str_room_id, pt_room->str_pwd, created, pt_room->str_creator_id);
-	freeReplyObject(reply);
-	return 0;
+	LOG_MSG("[redis] room save: %s, pwd: %s, created: %s, creator_id: %s\n", room->room_id,
+		 room->password, str_created, room->creator_id);
+
+	freeReplyObject(pt_reply);
+
+	return ZT_RC_OK;
 }
 
-int ZT_REDIS_RoomGet(const char *room_id, room_t *out_room)
+int redis_room_get(const char *room_id, room_t *out_room)
 {
-	redisReply *reply = NULL;
-	char key[64];
+	redisReply *pt_reply = NULL;
+	char str_key[KEY_MAX_LEN];
 
-	if (g_redis == NULL || room_id == NULL || out_room == NULL)
-		return -2;
+	if (g_redis_ctx == NULL || room_id == NULL || out_room == NULL)
+		return ZT_RC_ARG_INVALID;
+
 	memset(out_room, 0, sizeof(*out_room));
 
-	snprintf(key, sizeof(key), ROOM_KEY_FMT, room_id);
+	snprintf(str_key, sizeof(str_key), ROOM_KEY_FMT, room_id);
 
-	/* pwd, creator_id 한 번에 조회 */
-	reply = redisCommand(g_redis, "HMGET %s pwd creator_id", key);
-	if (reply == NULL || reply->type == REDIS_REPLY_ERROR) {
-		if (reply) freeReplyObject(reply);
-		return -2;
+	pt_reply = redisCommand(g_redis_ctx, REDIS_ROOM_GET_CMD, str_key);
+	if (pt_reply == NULL || pt_reply->type == REDIS_REPLY_ERROR) {
+		if (pt_reply)
+			freeReplyObject(pt_reply);
+		return ZT_RC_REDIS;
 	}
-	
-	if (reply->type != REDIS_REPLY_ARRAY || reply->elements < 2
-		|| reply->element[0]->type == REDIS_REPLY_NIL
-		|| reply->element[0]->str == NULL) {
-		freeReplyObject(reply);
-		return -1; /* not found */
+
+	if (pt_reply->type != REDIS_REPLY_ARRAY || pt_reply->elements < 2
+	    || pt_reply->element[0]->type == REDIS_REPLY_NIL
+	    || pt_reply->element[0]->str == NULL) {
+		freeReplyObject(pt_reply);
+		LOG_MSG("[redis] room get: %s, get data fail\n", room_id);
+		return ZT_RC_REDIS;
 	}
-	snprintf(out_room->str_room_id,    sizeof(out_room->str_room_id),    "%s", room_id);
-	snprintf(out_room->str_pwd,        sizeof(out_room->str_pwd),        "%s", reply->element[0]->str);
-	
-	if (reply->element[1]->type != REDIS_REPLY_NIL && reply->element[1]->str != NULL)
-		snprintf(out_room->str_creator_id, sizeof(out_room->str_creator_id), "%s", reply->element[1]->str);
-	
-	LOG_INFO("[ZT_REDIS] room get: %s, pwd: %s, creator_id: %s\n", room_id, out_room->str_pwd, out_room->str_creator_id);
-	freeReplyObject(reply);
-	return 0;
+	snprintf(out_room->room_id, sizeof(out_room->room_id), "%s", room_id);
+	snprintf(out_room->password, sizeof(out_room->password), "%s", pt_reply->element[0]->str);
+
+	if (pt_reply->element[1]->type != REDIS_REPLY_NIL && pt_reply->element[1]->str != NULL)
+		snprintf(out_room->creator_id, sizeof(out_room->creator_id), "%s",
+			 pt_reply->element[1]->str);
+
+	LOG_MSG("[redis] room get: %s, pwd: %s, creator_id: %s\n", room_id, out_room->password,
+		 out_room->creator_id);
+
+	freeReplyObject(pt_reply);
+
+	return ZT_RC_OK;
 }
 
-int ZT_REDIS_RoomList(room_t *out_rooms, size_t max_rooms)
+int redis_room_list(room_t *out_rooms, size_t max_rooms)
 {
-	redisReply *reply = NULL;
+	redisReply *pt_reply = NULL;
 	size_t count = 0;
 	char cursor[32] = "0";
 
-	if (g_redis == NULL || out_rooms == NULL || max_rooms == 0)
-		return -2;
+	if (g_redis_ctx == NULL || out_rooms == NULL || max_rooms == 0)
+		return ZT_RC_ARG_INVALID;
 
 	do {
-		reply = redisCommand(g_redis, "SCAN %s MATCH " ROOM_KEY_PATTERN " COUNT 50", cursor);
-		if (reply == NULL || reply->type != REDIS_REPLY_ARRAY || reply->elements < 2) {
-			if (reply) freeReplyObject(reply);
-			return -2;
+		pt_reply = redisCommand(g_redis_ctx, REDIS_ROOM_LIST_CMD, cursor);
+		if (pt_reply == NULL || pt_reply->type != REDIS_REPLY_ARRAY || pt_reply->elements < 2) {
+			if (pt_reply)
+				freeReplyObject(pt_reply);
+			LOG_MSG("[redis] room list: list data fail\n");
+			return ZT_RC_REDIS;
 		}
 
-		/* 다음 커서 */
-		snprintf(cursor, sizeof(cursor), "%s", reply->element[0]->str ? reply->element[0]->str : "0");
+		snprintf(cursor, sizeof(cursor), "%s",
+			 pt_reply->element[0]->str ? pt_reply->element[0]->str : "0");
 
-		/* 키 리스트 */
-		redisReply *keys = reply->element[1];
+		redisReply *keys = pt_reply->element[1];
 		if (keys->type == REDIS_REPLY_ARRAY) {
 			for (size_t i = 0; i < keys->elements && count < max_rooms; i++) {
 				const char *key = keys->element[i]->str;
 				const char *p = NULL;
-				redisReply *hreply = NULL;
+				redisReply *pt_hreply = NULL;
 
-				if (!key) continue;
+				if (!key)
+					continue;
 
 				p = strchr(key, ':');
 				if (!p || *(p + 1) == '\0')
 					continue;
 
 				memset(&out_rooms[count], 0, sizeof(room_t));
-				snprintf(out_rooms[count].str_room_id, sizeof(out_rooms[count].str_room_id), "%s", p + 1);
+				snprintf(out_rooms[count].room_id, sizeof(out_rooms[count].room_id), "%s",
+					 p + 1);
 
-				/* 각 방의 creator_id 조회 */
-				hreply = redisCommand(g_redis, "HGET %s creator_id", key);
-				if (hreply && hreply->type == REDIS_REPLY_STRING && hreply->str) {
-					snprintf(out_rooms[count].str_creator_id,
-					         sizeof(out_rooms[count].str_creator_id),
-					         "%s", hreply->str);
+				pt_hreply = redisCommand(g_redis_ctx, REDIS_ROOM_GET_CMD, key);
+				if (pt_hreply && pt_hreply->type == REDIS_REPLY_ARRAY && pt_hreply->elements >= 2
+				    && pt_hreply->element[1]->type != REDIS_REPLY_NIL
+				    && pt_hreply->element[1]->str) {
+					snprintf(out_rooms[count].creator_id,
+						 sizeof(out_rooms[count].creator_id), "%s",
+						 pt_hreply->element[1]->str);
 				}
-				if (hreply) {
-					freeReplyObject(hreply);
-					hreply = NULL;
+				if (pt_hreply) {
+					freeReplyObject(pt_hreply);
+					pt_hreply = NULL;
 				}
 
 				count++;
 			}
 		}
 
-		freeReplyObject(reply);
-		reply = NULL;
+		freeReplyObject(pt_reply);
+		pt_reply = NULL;
 
 	} while (cursor[0] != '0' && count < max_rooms);
 
-	LOG_INFO("[ZT_REDIS] room list count: %zu\n", count);
-	return (int)count;
+	LOG_MSG("[redis] room list count: %zu\n", count);
+	return ZT_RC_OK;
 }

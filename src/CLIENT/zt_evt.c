@@ -1,9 +1,9 @@
-#include "ZT_Inc.h"
-#include "ZT_sock.h"
-#include "ZT_hdl.h"
-#include "ZT_ctrl.h"
-#include "ZT_log.h"
-#include "ZT_log_fmt.h"
+#include "zt_common.h"
+#include "zt_sock.h"
+#include "zt_hdl.h"
+#include "zt_ctrl.h"
+#include "zt_log.h"
+#include "zt_log_fmt.h"
 
 int EventLoop(int socket, int is_client)
 {
@@ -13,13 +13,13 @@ int EventLoop(int socket, int is_client)
 
 	if (socket < 0) {
 		LOG_MSG("[EventLoop] Socket FD is Wrong\n");
-		return ERR_ARG_INVALID;
+		return ZT_RC_ARG_INVALID;
 	}
 
 	epfd = epoll_create1(0);
 	if (epfd < 0) {
 		LOG_MSG("[EventLoop] Epoll Create Fail\n");
-		return ERR_EPOLL_CREATE;
+		return ZT_RC_SOCKET;
 	}
 
 	tEv.events = EPOLLIN;
@@ -31,7 +31,7 @@ int EventLoop(int socket, int is_client)
 	}
 
 	rc = SET_NONBLOCKING(socket);
-	if (rc < 0) {
+	if (rc != ZT_RC_OK) {
 		LOG_MSG("[EventLoop] Set Nonblocking Fail\n");
 		goto close_event;
 	}
@@ -54,7 +54,7 @@ int EventLoop(int socket, int is_client)
 			{
 				/* Server only: new client connection */
 				rc = HDL_ACCEPT(socket);
-				if (rc < 0) 
+				if (rc != ZT_RC_OK) 
 				{
 					LOG_MSG("[EventLoop] HDL_ACCEPT fail\n");
 					goto close_event;
@@ -72,7 +72,7 @@ int EventLoop(int socket, int is_client)
 						rc = HDL_SOCKET(epfd, fd);
 					}
 					
-					if (rc < 0) {
+					if (rc != ZT_RC_OK) {
 						LOG_MSG("[EventLoop] %s fail\n", is_client ? "HDL_CLIENT_RECV" : "HDL_SOCKET");
 						goto close_event;
 					}
@@ -81,12 +81,12 @@ int EventLoop(int socket, int is_client)
 		}
 	}
 
-	return SOCKET_OK;
+	return ZT_RC_OK;
 
 close_event:
 
 	if (epfd >= 0)
 		close(epfd);
 	
-	return ERR_EVENTLOOP;
+	return ZT_RC_SOCKET;
 }

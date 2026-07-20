@@ -11,8 +11,7 @@
 #define BODY_MAX_LEN 4096
 #define HEADER_MAX_COUNT 16
 
-#include "ZT_Inc.h"
-#include <pthread.h>
+#include "zt_common.h"
 
 typedef struct _HeaderType {
     char name[NAME_MAX_LEN];
@@ -64,10 +63,6 @@ typedef struct HttpCTX_t {
     int conn_state;
     struct HttpCTX_t *pt_next_ctx;
 } HttpCTX_t;
-
-#ifndef MAX_CLIENTS
-#define MAX_CLIENTS 100
-#endif
 
 typedef struct _ZT_CTX {
     HttpCTX_t *pt_http_ctx;

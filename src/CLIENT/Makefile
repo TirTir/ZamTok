@@ -8,13 +8,13 @@ RELEASE_DIR ?= release
 TARGET_NAME := $(notdir $(patsubst %/,%,$(MKFDIR)))
 RB_RELEASE_DIR := $(MKFDIR)../release
 
-SRCS = ZT_main.c \
-       ZT_ctx.c  \
-       ZT_chat.c \
-       ZT_ctrl.c \
-       ZT_evt.c  \
-       ZT_hdl.c  \
-       ZT_sock.c \
+SRCS = zt_main.c \
+       zt_ctx.c \
+       zt_chat.c \
+       zt_ctrl.c \
+       zt_evt.c \
+       zt_hdl.c \
+       zt_sock.c
 
 OBJDIR := $(RELEASE_DIR)
 OBJS = $(SRCS:%.c=$(OBJDIR)/%.o)
@@ -33,7 +33,7 @@ $(OBJDIR)/%.o: %.c | $(OBJDIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 %.o: %.c
-	$(CC) $(CFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(RELEASE_DIR)/$(TARGET_NAME): $(OBJS) | $(OBJDIR)
 	$(CC) $(CFLAGS) -o $@ $^ -lpthread
@@ -43,4 +43,3 @@ clean:
 
 rb_clean:
 	$(RM) $(RB_RELEASE_DIR)/$(TARGET_NAME)
-

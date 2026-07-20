@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "ZT_log_ts.h"
+#include "zt_log_ts.h"
 
 /* 고정 너비: 구분선 '=' 개수 및 한 줄 글자 수 */
 #define LOG_FMT_WIDTH  52

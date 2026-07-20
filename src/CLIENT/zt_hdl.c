@@ -1,7 +1,7 @@
-#include "ZT_Inc.h"
-#include "ZT_ctx.h"
-#include "ZT_log.h"
-#include "ZT_log_fmt.h"
+#include "zt_common.h"
+#include "zt_ctx.h"
+#include "zt_log.h"
+#include "zt_log_fmt.h"
 
 #define HEADER_FMT "HTTP/%.15s %d %.63s\r\nContent-Length: %.63s\r\nContent-Type: %.63s\r\n\r\n"
 
@@ -48,7 +48,7 @@ void HDL_500(int socket)
 int HDL_HEADER( char *p_header, char *p_buf, int status, ReqType_t *t_msg )
 {
 	if( !p_header || !p_buf || status < 100 )
-		return ERR_ARG_INVALID;
+		return ZT_RC_ARG_INVALID;
 
 	char status_msg[MAX_STATUS_MSG_LEN] = "";
 	char *temp = NULL;
@@ -96,7 +96,7 @@ int HDL_HEADER( char *p_header, char *p_buf, int status, ReqType_t *t_msg )
 			t_msg->t_content_header[0].value, 
 			t_msg->t_content_header[1].value );
 
-	return SOCKET_OK;
+	return ZT_RC_OK;
 }
 
 
@@ -111,13 +111,13 @@ int HDL_HEADER_MIME( char *p_content_type, int size, const char *p_uri )
 	if( p_content_type == NULL )
 	{
 		LOG_MSG("[HDL_HEADER_MIME] Content Type is NULL\n");
-		return ERR_ARG_INVALID;
+		return ZT_RC_ARG_INVALID;
 	}
 	
 	if( p_uri == NULL )
 	{
 		LOG_MSG("[HDL_HEADER_MIME] URI is NULL\n");
-		return ERR_ARG_INVALID;
+		return ZT_RC_ARG_INVALID;
 	}
 
 	char *p_ext = strrchr( p_uri, '.' );
@@ -145,12 +145,12 @@ int HDL_HEADER_MIME( char *p_content_type, int size, const char *p_uri )
 	else 
 		snprintf( p_content_type, size, "%s", "text/plain" );
 
-	return SOCKET_OK;
+	return ZT_RC_OK;
 }
 
 /*=================================================
  * name : HDL_CLIENT_RECV
- * return : SOCKET_OK / error
+ * return : ZT_RC_OK / error
  * param : socket - client socket
  * note  : Client only - read and display HTTP response (not parse as request)
  ===================================================*/
@@ -161,25 +161,25 @@ int HDL_CLIENT_RECV(int socket)
 
 	if (socket < 0) {
 		LOG_MSG("[HDL_CLIENT_RECV] Socket FD is Wrong\n");
-		return ERR_ARG_INVALID;
+		return ZT_RC_ARG_INVALID;
 	}
 
 	n = read(socket, buf, sizeof(buf) - 1);
 	if (n < 0 && (errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR)) {
-		return SOCKET_OK;
+		return ZT_RC_OK;
 	}
 	if (n <= 0) {
 		if (n == 0)
 			LOG_MSG("[HDL_CLIENT_RECV] Connection closed\n");
 
-		return -1;
+		return ZT_RC_SOCKET;
 	}
 
 	buf[n] = '\0';
 	LOG_FMT_CENTER("Server Response");
 	LOG_MSG("%s\n", buf);
 
-	return SOCKET_OK;
+	return ZT_RC_OK;
 }
 
 /*=================================================
@@ -201,13 +201,13 @@ int HDL_SOCKET ( int epfd, int socket )
 	if( epfd < 0 )
 	{
 		LOG_MSG("[HDL_SOCKET] Epoll FD is Wrong\n");
-		return ERR_ARG_INVALID;
+		return ZT_RC_ARG_INVALID;
 	}
 
 	if( socket < 0 )
 	{
 		LOG_MSG("[HDL_SOCKET] Socket FD is Wrong\n");
-		return ERR_ARG_INVALID;
+		return ZT_RC_ARG_INVALID;
 	}
 
 	while( retry_cnt < RETRY_MAX_CNT )
@@ -239,7 +239,7 @@ int HDL_SOCKET ( int epfd, int socket )
 		{
 			LOG_MSG("[HDL_SOCKET] Invalid Request Line\n");
 			HDL_400( socket );
-			return ERR_ARG_INVALID;
+			return ZT_RC_ARG_INVALID;
 		}
 
 		/* Start Line Parsing */
@@ -252,7 +252,7 @@ int HDL_SOCKET ( int epfd, int socket )
 			snprintf( t_msg.uri, sizeof(t_msg.uri), "%s", "/indx.html" );
 
 		rc = HDL_HEADER_MIME( t_msg.t_content_header[t_msg.content_cnt].value, VALUE_MAX_LEN, t_msg.uri );
-		if( rc == SOCKET_OK )
+		if( rc == ZT_RC_OK )
         {
             status = 200;
         }
@@ -262,10 +262,10 @@ int HDL_SOCKET ( int epfd, int socket )
 		}
 
         rc = HDL_HEADER( header, buf, status, &t_msg );
-		if( rc < 0 )
+		if( rc != ZT_RC_OK )
 		{
 			LOG_ERR("HDL_HEADER fail\n");
-	        return ERR_SOCKET_READ;
+	        return ZT_RC_SOCKET;
 		}
 
 		LOG_FMT_CENTER("HDL_SOCKET_Request Parsing");
@@ -278,10 +278,10 @@ int HDL_SOCKET ( int epfd, int socket )
 	if( n == 0 )
 	{
 		LOG_MSG("[DICONNECT] FD=%d closed\n", socket);
-		return SOCKET_OK;
+		return ZT_RC_OK;
 	}
 	
-    return SOCKET_OK;
+    return ZT_RC_OK;
 }
 
 int HDL_ACCEPT( int socket )
@@ -296,24 +296,24 @@ int HDL_ACCEPT( int socket )
 	if( client_fd < 0 )
 	{
 		LOG_MSG("[HDL_ACCEPT] Socket Accept Fail\n");
-		return ERR_SOCKET_ACCEPT;
+		return ZT_RC_SOCKET;
 	}
 
     rc = CTX_Http_Insert( &gt_ctx_info, client_fd, t_client_addr ); 
-    if( rc < 0 )
+    if( rc != ZT_RC_OK )
     {
         LOG_MSG("[HDL_ACCEPT] Insert Client Info Fail\n");
-        return ERR_CTX_INSERT;
+        return ZT_RC_CTX;
     }
 	
 	/* FD pool에 클라이언트 등록 */
 	g_client_fd[client_fd/8] |= ( 1 << ( client_fd % 8 ));
 
 
-	return SOCKET_OK;
+	return ZT_RC_OK;
 }
 
 int *HDL_CREATE( )
 {
-	return SOCKET_OK;
+	return ZT_RC_OK;
 }

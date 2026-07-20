@@ -1,0 +1,151 @@
+#include "zt_common.h"
+#include "zt_sock.h"
+#include <stddef.h>
+
+int SET_NONBLOCKING(int socket)
+{
+	int flags;
+	int rc;
+
+	if (socket < 0) {
+		printf("[SET_NONBLOCKING] Socket is Wrong\n");
+		return ZT_RC_ARG_INVALID;
+	}
+
+	flags = fcntl(socket, F_GETFL, 0);
+
+	if (flags < 0) {
+		printf("[SET_NONBLOCKING] fcntl Get Fail\n");
+		return ZT_RC_SOCKET;
+	}
+
+	/* file status flag setting */	
+	rc = fcntl(socket, F_SETFL, flags | O_NONBLOCK);
+	
+	if (rc < 0) {
+		printf("[SET_NONBLOCKING] fcntl Nonblock Set Fail\n");
+		return ZT_RC_SOCKET;
+	}
+
+	return ZT_RC_OK;
+}
+
+int SOCKET_Init(int *pSocket)
+{
+	int fd;
+
+	if (pSocket == NULL) {
+		printf("[SOCKET_Init] Socket is NULL\n");
+		return ZT_RC_ARG_INVALID;
+	}
+
+	fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd < 0) {
+		printf("[SOCKET_Init] Socket Create Fail <%d:%s>\n", errno, strerror(errno));
+		return ZT_RC_SOCKET;
+	}
+
+	*pSocket = fd;
+	return ZT_RC_OK;
+}
+
+int SOCKET_Connect(int socket, const char *host, int port)
+{
+	struct addrinfo hints, *res, *rp;
+	char port_str[8];
+	int rc;
+
+	if (socket < 0) {
+		printf("[SOCKET_Connect] Socket is Wrong\n");
+		return ZT_RC_ARG_INVALID;
+	}
+	if (host == NULL) {
+		printf("[SOCKET_Connect] Host is NULL\n");
+		return ZT_RC_ARG_INVALID;
+	}
+	if (port <= 0 || port > 65535) {
+		printf("[SOCKET_Connect] Port is Wrong\n");
+		return ZT_RC_ARG_INVALID;
+	}
+
+	snprintf(port_str, sizeof(port_str), "%d", port);
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family   = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+
+	rc = getaddrinfo(host, port_str, &hints, &res);
+	if (rc != 0) {
+		printf("[SOCKET_Connect] DNS Resolution Fail <%s>: %s\n", host, gai_strerror(rc));
+		return ZT_RC_SOCKET;
+	}
+
+	rc = ZT_RC_SOCKET;
+	for (rp = res; rp != NULL; rp = rp->ai_next) {
+		if (connect(socket, rp->ai_addr, rp->ai_addrlen) == 0) {
+			rc = ZT_RC_OK;
+			break;
+		}
+	}
+
+	freeaddrinfo(res);
+
+	if (rc != ZT_RC_OK) {
+		printf("[SOCKET_Connect] Connect Fail <%d:%s>\n", errno, strerror(errno));
+	}
+
+	return rc;
+}
+
+int SOCKET_SendHttpRequest(int socket, const char *host, const char *method,
+			   const char *path)
+{
+	char req_buf[2048];
+	int len, n;
+
+	if (socket < 0 || host == NULL || method == NULL || path == NULL) {
+		printf("[SOCKET_SendHttpRequest] Invalid argument\n");
+		return ZT_RC_ARG_INVALID;
+	}
+
+	len = snprintf(req_buf, sizeof(req_buf), HTTP_REQUEST_FMT,
+		method, path, host, (size_t)0, "");
+	if (len < 0 || (size_t)len >= sizeof(req_buf)) {
+		printf("[SOCKET_SendHttpRequest] Request too long\n");
+		return ZT_RC_ARG_INVALID;
+	}
+
+	n = (int)write(socket, req_buf, (size_t)len);
+	if (n < 0) {
+		printf("[SOCKET_SendHttpRequest] Write Fail <%d:%s>\n", errno, strerror(errno));
+		return ZT_RC_SOCKET;
+	}
+	if (n != len) {
+		printf("[SOCKET_SendHttpRequest] Partial write\n");
+		return ZT_RC_SOCKET;
+	}
+
+	return ZT_RC_OK;
+}
+
+int SOCKET_SendRequestBuf(int socket, const char *req_buf, size_t len)
+{
+	int n;
+
+	if (socket < 0 || req_buf == NULL) {
+		printf("[SOCKET_SendRequestBuf] Invalid argument\n");
+		return ZT_RC_ARG_INVALID;
+	}
+
+	n = (int)write(socket, req_buf, len);
+	if (n < 0) {
+		printf("[SOCKET_SendRequestBuf] Write Fail <%d:%s>\n", errno, strerror(errno));
+		return ZT_RC_SOCKET;
+	}
+	if ((size_t)n != len) {
+		printf("[SOCKET_SendRequestBuf] Partial write\n");
+		return ZT_RC_SOCKET;
+	}
+
+	return ZT_RC_OK;
+}

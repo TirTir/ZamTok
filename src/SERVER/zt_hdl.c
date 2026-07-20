@@ -221,6 +221,21 @@ int hdl_socket(int epfd, int client_fd)
 			break;
 		}
 
+		if (!strncmp(request.str_uri, "/friends?user_id=", 17) &&
+		    !strncmp(request.str_method, "GET", 3)) {
+			rc = http_list_friends(client_fd, read_buf, &request);
+			if (rc < 0)
+				return ZT_RC_SOCKET;
+			break;
+		}
+
+		if (!strcmp(request.str_uri, "/room/invite") && !strncmp(request.str_method, "POST", 4)) {
+			rc = http_invite_room(client_fd, read_buf, &request);
+			if (rc < 0)
+				return ZT_RC_SOCKET;
+			break;
+		}
+
 		if (!strcmp(request.str_uri, "/"))
 			snprintf(request.str_uri, sizeof(request.str_uri), "%s", "/indx.html");
 

@@ -17,7 +17,7 @@ spec:
           image: tirtir0827/zamtok-server:latest
           imagePullPolicy: Always
 #         imagePullPolicy: IfNotPresent
-          command: ["/scripts/init.sh"]
+          command: ["sh", "/scripts/setup.sh"]
           envFrom:
             - configMapRef:
                 name: server-config

@@ -24,7 +24,7 @@ RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && \
     ldconfig
 
 # 서버 바이너리 복사
-COPY SERVER /app/server
+COPY release/SERVER /app/server
 RUN chmod +x /app/server
 
 EXPOSE 8080

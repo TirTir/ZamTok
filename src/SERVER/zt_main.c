@@ -8,6 +8,8 @@ int main( int argc, char **argv )
 	int rc = -1, socket = -1;
 	int port = 0;
 
+	setvbuf(stdout, NULL, _IOLBF, 0);
+
 	if (argc < 2) {
 		LOG_MSG("[INFO] Use: %s <port>\n", argv[0] ? argv[0] : "CLIENT");
 		return -1;

@@ -286,7 +286,7 @@ int hdl_accept(int listen_fd, int epfd)
 	}
 
 	socket_set_nonblocking(client_fd);
-	ev.events = EPOLLIN;
+	ev.events = EPOLLIN | EPOLLRDHUP;
 	ev.data.fd = client_fd;
 	rc = epoll_ctl(epfd, EPOLL_CTL_ADD, client_fd, &ev);
 	if (rc < 0) {

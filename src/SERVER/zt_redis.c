@@ -2,103 +2,17 @@
 
 static redisContext *g_redis_ctx = NULL;
 
-static int redis_exists_key(const char *str_key)
-{
-	redisReply *pt_reply = NULL;
-	int exists = -1;
+/*--------------------------------------------------------------------------
+ *   STATIC FUNCTION PROTOTYPE
+ *-------------------------------------------------------------------------*/
+static int redis_exists_key(const char *str_key);
+static char *redis_trim_token(char *str);
+static int redis_add_room_member(const char *room_id, const char *user_id);
+static int redis_add_room_members(const char *room_id, const char *members);
 
-	if (g_redis_ctx == NULL || str_key == NULL)
-		return -1;
-
-	pt_reply = redisCommand(g_redis_ctx, REDIS_EXISTS_CMD, str_key);
-	if (pt_reply == NULL || pt_reply->type == REDIS_REPLY_ERROR)
-		goto done;
-
-	exists = (pt_reply->integer > 0) ? 1 : 0;
-
-done:
-	if (pt_reply)
-		freeReplyObject(pt_reply);
-	return exists;
-}
-
-static char *redis_trim_token(char *str)
-{
-	char *end;
-
-	if (str == NULL)
-		return NULL;
-
-	while (*str == ' ' || *str == '\t' || *str == '\r' || *str == '\n')
-		str++;
-
-	end = str + strlen(str);
-	while (end > str && (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\r' ||
-			     end[-1] == '\n')) {
-		end--;
-	}
-	*end = '\0';
-
-	return str;
-}
-
-static int redis_add_room_member(const char *room_id, const char *user_id)
-{
-	redisReply *pt_reply = NULL;
-	char str_member_key[KEY_MAX_LEN];
-	char str_user_rooms_key[KEY_MAX_LEN];
-
-	if (room_id == NULL || user_id == NULL || user_id[0] == '\0')
-		return ZT_RC_ARG_INVALID;
-
-	snprintf(str_member_key, sizeof(str_member_key), ROOM_MEMBERS_KEY_FMT, room_id);
-	snprintf(str_user_rooms_key, sizeof(str_user_rooms_key), USER_ROOMS_KEY_FMT, user_id);
-
-	pt_reply = redisCommand(g_redis_ctx, REDIS_ROOM_MEMBER_ADD_CMD, str_member_key, user_id);
-	if (pt_reply == NULL || pt_reply->type == REDIS_REPLY_ERROR) {
-		if (pt_reply)
-			freeReplyObject(pt_reply);
-		return ZT_RC_REDIS;
-	}
-	freeReplyObject(pt_reply);
-
-	pt_reply = redisCommand(g_redis_ctx, REDIS_USER_ROOM_ADD_CMD, str_user_rooms_key, room_id);
-	if (pt_reply == NULL || pt_reply->type == REDIS_REPLY_ERROR) {
-		if (pt_reply)
-			freeReplyObject(pt_reply);
-		return ZT_RC_REDIS;
-	}
-	freeReplyObject(pt_reply);
-
-	return ZT_RC_OK;
-}
-
-static int redis_add_room_members(const char *room_id, const char *members)
-{
-	char str_members[ROOM_MEMBERS_MAX_LEN];
-	char *saveptr = NULL;
-	char *token;
-	int rc;
-
-	if (members == NULL || members[0] == '\0')
-		return ZT_RC_OK;
-
-	snprintf(str_members, sizeof(str_members), "%s", members);
-
-	for (token = strtok_r(str_members, ",", &saveptr); token != NULL;
-	     token = strtok_r(NULL, ",", &saveptr)) {
-		token = redis_trim_token(token);
-		if (token == NULL || token[0] == '\0')
-			continue;
-
-		rc = redis_add_room_member(room_id, token);
-		if (rc != ZT_RC_OK)
-			return rc;
-	}
-
-	return ZT_RC_OK;
-}
-
+/*--------------------------------------------------------------------------
+ *   EXTERN FUNCTION 
+ *-------------------------------------------------------------------------*/
 int redis_connect(const char *str_host, int i_port)
 {
 	if (g_redis_ctx != NULL) {
@@ -108,11 +22,13 @@ int redis_connect(const char *str_host, int i_port)
 
 	if (str_host == NULL)
 		str_host = "127.0.0.1";
+
 	if (i_port <= 0)
 		i_port = 6379;
 
 	g_redis_ctx = redisConnect(str_host, i_port);
-	if (g_redis_ctx == NULL || g_redis_ctx->err) {
+	if (g_redis_ctx == NULL || g_redis_ctx->err) 
+	{
 		if (g_redis_ctx)
 			LOG_MSG("[redis] connect fail: %s\n", g_redis_ctx->errstr);
 		else
@@ -125,6 +41,7 @@ int redis_connect(const char *str_host, int i_port)
 err_return:
 	if (g_redis_ctx)
 		redis_disconnect();
+
 	return ZT_RC_REDIS;
 }
 
@@ -208,6 +125,8 @@ int redis_user_get(const char *user_id, user_t *out_user)
 	snprintf(str_key, sizeof(str_key), USER_KEY_FMT, user_id);
 
 	pt_reply = redisCommand(g_redis_ctx, REDIS_USER_GET_CMD, str_key);
+
+	/* reply error */
 	if (pt_reply == NULL || pt_reply->type == REDIS_REPLY_ERROR) {
 		if (pt_reply)
 			freeReplyObject(pt_reply);
@@ -272,6 +191,8 @@ int redis_friend_list(const char *user_id, friend_t *out_friends, size_t max_fri
 	snprintf(str_key, sizeof(str_key), FRIEND_KEY_FMT, user_id);
 
 	pt_reply = redisCommand(g_redis_ctx, REDIS_FRIEND_LIST_CMD, str_key);
+
+	/* reply error */
 	if (pt_reply == NULL || pt_reply->type == REDIS_REPLY_ERROR) {
 		if (pt_reply)
 			freeReplyObject(pt_reply);
@@ -403,6 +324,7 @@ int redis_room_get(const char *room_id, room_t *out_room)
 int redis_room_list(room_t *out_rooms, size_t max_rooms)
 {
 	redisReply *pt_reply = NULL;
+	
 	size_t count = 0;
 	char cursor[32] = "0";
 
@@ -413,9 +335,13 @@ int redis_room_list(room_t *out_rooms, size_t max_rooms)
 
 	do {
 		pt_reply = redisCommand(g_redis_ctx, REDIS_ROOM_LIST_CMD, cursor);
+		
+		/* reply error  */
 		if (pt_reply == NULL || pt_reply->type != REDIS_REPLY_ARRAY || pt_reply->elements < 2) {
+
 			if (pt_reply)
 				freeReplyObject(pt_reply);
+
 			LOG_MSG("[redis] room list: list data fail\n");
 			return ZT_RC_REDIS;
 		}
@@ -424,6 +350,7 @@ int redis_room_list(room_t *out_rooms, size_t max_rooms)
 			 pt_reply->element[0]->str ? pt_reply->element[0]->str : "0");
 
 		redisReply *keys = pt_reply->element[1];
+
 		if (keys->type == REDIS_REPLY_ARRAY) {
 			for (size_t i = 0; i < keys->elements && count < max_rooms; i++) {
 				const char *key = keys->element[i]->str;
@@ -468,3 +395,105 @@ int redis_room_invite(const char *room_id, const char *user_id, const char *memb
 	LOG_MSG("[redis] room invite: room=%s by=%s members=%s\n", room_id, user_id, members);
 	return ZT_RC_OK;
 }
+
+/*--------------------------------------------------------------------------
+ *   LOCAL FUNCTION
+ *-------------------------------------------------------------------------*/
+static int redis_exists_key(const char *str_key)
+{
+	redisReply *pt_reply = NULL;
+	int exists = -1;
+
+	if (g_redis_ctx == NULL || str_key == NULL)
+		return -1;
+
+	pt_reply = redisCommand(g_redis_ctx, REDIS_EXISTS_CMD, str_key);
+	if (pt_reply == NULL || pt_reply->type == REDIS_REPLY_ERROR)
+		goto done;
+
+	exists = (pt_reply->integer > 0) ? 1 : 0;
+
+done:
+	if (pt_reply)
+		freeReplyObject(pt_reply);
+
+	return exists;
+}
+
+static char *redis_trim_token(char *str)
+{
+	char *end;
+
+	if (str == NULL)
+		return NULL;
+
+	while (*str == ' ' || *str == '\t' || *str == '\r' || *str == '\n')
+		str++;
+
+	end = str + strlen(str);
+	while (end > str && (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\r' ||
+			     end[-1] == '\n')) {
+		end--;
+	}
+	*end = '\0';
+
+	return str;
+}
+
+static int redis_add_room_member(const char *room_id, const char *user_id)
+{
+	redisReply *pt_reply = NULL;
+	char str_member_key[KEY_MAX_LEN];
+	char str_user_rooms_key[KEY_MAX_LEN];
+
+	if (room_id == NULL || user_id == NULL || user_id[0] == '\0')
+		return ZT_RC_ARG_INVALID;
+
+	snprintf(str_member_key, sizeof(str_member_key), ROOM_MEMBERS_KEY_FMT, room_id);
+	snprintf(str_user_rooms_key, sizeof(str_user_rooms_key), USER_ROOMS_KEY_FMT, user_id);
+
+	pt_reply = redisCommand(g_redis_ctx, REDIS_ROOM_MEMBER_ADD_CMD, str_member_key, user_id);
+	if (pt_reply == NULL || pt_reply->type == REDIS_REPLY_ERROR) {
+		if (pt_reply)
+			freeReplyObject(pt_reply);
+		return ZT_RC_REDIS;
+	}
+	freeReplyObject(pt_reply);
+
+	pt_reply = redisCommand(g_redis_ctx, REDIS_USER_ROOM_ADD_CMD, str_user_rooms_key, room_id);
+	if (pt_reply == NULL || pt_reply->type == REDIS_REPLY_ERROR) {
+		if (pt_reply)
+			freeReplyObject(pt_reply);
+		return ZT_RC_REDIS;
+	}
+	freeReplyObject(pt_reply);
+
+	return ZT_RC_OK;
+}
+
+static int redis_add_room_members(const char *room_id, const char *members)
+{
+	char str_members[ROOM_MEMBERS_MAX_LEN];
+	char *saveptr = NULL;
+	char *token;
+	int rc;
+
+	if (members == NULL || members[0] == '\0')
+		return ZT_RC_OK;
+
+	snprintf(str_members, sizeof(str_members), "%s", members);
+
+	for (token = strtok_r(str_members, ",", &saveptr); token != NULL;
+	     token = strtok_r(NULL, ",", &saveptr)) {
+		token = redis_trim_token(token);
+		if (token == NULL || token[0] == '\0')
+			continue;
+
+		rc = redis_add_room_member(room_id, token);
+		if (rc != ZT_RC_OK)
+			return rc;
+	}
+
+	return ZT_RC_OK;
+}
+

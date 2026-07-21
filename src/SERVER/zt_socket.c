@@ -233,7 +233,18 @@ int socket_event_loop( int socket )
 				}
 			}
 			else
-			{		
+			{
+				if( tEvents[i].events & ( EPOLLRDHUP | EPOLLHUP | EPOLLERR ) )
+				{
+					LOG_MSG("[EventLoop] Client FD=%d connection closed (events=0x%x)\n",
+						fd, tEvents[i].events);
+					(void)epoll_ctl( epfd, EPOLL_CTL_DEL, fd, NULL );
+					close( fd );
+					if ( fd >= 0 && fd < MAX_CLIENTS )
+						g_client_fd[fd/8] &= (unsigned char)~( 1 << ( fd % 8 ) );
+					continue;
+				}
+
 				if( tEvents[i].events & EPOLLIN )
 				{
 					rc = hdl_socket( epfd, fd );

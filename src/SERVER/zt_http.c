@@ -274,6 +274,13 @@ int http_login(int socket, const char *buf, req_t *t_request)
 		goto next;
 	}
 
+	rc = redis_sub_user(t_user.user_id, strlen(t_user.user_id));
+	if (rc != ZT_RC_OK) {
+		status = HTTP_INTERNAL_SERVER_ERROR;
+		err_code = ZT_ERR_SERVER_ERROR;
+		goto next;
+	}
+
 	e_result = RESULT_SUCCESS;
 	err_code = ZT_ERR_SUCCESS;
 
@@ -360,6 +367,13 @@ int http_create_room(int socket, const char *buf, req_t *t_request)
 	if (rc != ZT_RC_OK) {
 		status = (rc == ZT_RC_CTX) ? HTTP_CONFLICT : HTTP_INTERNAL_SERVER_ERROR;
 		err_code = (rc == ZT_RC_CTX) ? ZT_ERR_ROOM_ALREADY_EXISTS : ZT_ERR_SERVER_ERROR;
+		goto next;
+	}
+
+	rc = redis_sub_room(t_room.room_id, strlen(t_room.room_id));
+	if (rc != ZT_RC_OK) {
+		status = HTTP_INTERNAL_SERVER_ERROR;
+		err_code = ZT_ERR_SERVER_ERROR;
 		goto next;
 	}
 
@@ -479,6 +493,13 @@ int http_join_room(int socket, const char *buf, req_t *t_request)
 	if (strcmp(t_stored_room.password, t_room.password) != 0) {
 		status = HTTP_UNAUTHORIZED;
 		err_code = ZT_ERR_WRONG_PASSWORD;
+		goto next;
+	}
+
+	rc = redis_sub_room(t_room.room_id, strlen(t_room.room_id));
+	if (rc != ZT_RC_OK) {
+		status = HTTP_INTERNAL_SERVER_ERROR;
+		err_code = ZT_ERR_SERVER_ERROR;
 		goto next;
 	}
 

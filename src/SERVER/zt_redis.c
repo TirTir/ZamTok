@@ -36,17 +36,22 @@ int redis_connect(const char *str_host, int i_port)
 		goto err_return;
 	}
 
+	/* SUBSCRIBE 전용 연결도 파드의 Redis 연결 수명에 맞춰 준비한다. */
+	if (redis_pubsub_init(str_host, i_port) != ZT_RC_OK)
+		goto err_return;
+
 	return ZT_RC_OK;
 
 err_return:
-	if (g_redis_ctx)
-		redis_disconnect();
+	redis_disconnect();
 
 	return ZT_RC_REDIS;
 }
 
 void redis_disconnect(void)
 {
+	redis_pubsub_deinit();
+
 	if (g_redis_ctx) {
 		redisFree(g_redis_ctx);
 		g_redis_ctx = NULL;
@@ -496,4 +501,3 @@ static int redis_add_room_members(const char *room_id, const char *members)
 
 	return ZT_RC_OK;
 }
-

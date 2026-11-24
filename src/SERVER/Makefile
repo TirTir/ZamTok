@@ -14,7 +14,8 @@ SRCS = zt_main.c \
        zt_http.c \
        zt_hdl.c \
        zt_util.c \
-       zt_redis.c
+       zt_redis.c \
+       zt_pubsub.c
 
 OBJDIR := $(RELEASE_DIR)
 OBJS = $(SRCS:%.c=$(OBJDIR)/%.o)

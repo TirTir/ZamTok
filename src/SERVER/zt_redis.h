@@ -27,6 +27,8 @@ int redis_room_get(const char *room_id, room_t *out_room);
 int redis_room_list(room_t *out_rooms, size_t max_rooms);
 int redis_room_invite(const char *room_id, const char *user_id, const char *members);
 
+redisContext *redis_get_ctx(void);
+
 int redis_sub_user(const char *user_id, size_t len);
 int redis_sub_room(const char *room_id, size_t len);
 

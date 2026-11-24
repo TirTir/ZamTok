@@ -48,6 +48,11 @@ err_return:
 	return ZT_RC_REDIS;
 }
 
+redisContext *redis_get_ctx(void)
+{
+	return g_redis_ctx;
+}
+
 void redis_disconnect(void)
 {
 	redis_pubsub_deinit();

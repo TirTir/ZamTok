@@ -27,6 +27,9 @@ RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && \
 COPY release/SERVER /app/server
 RUN chmod +x /app/server
 
+COPY WEB/public/ /app/www/
+ENV ZT_WEB_ROOT=/app/www
+
 EXPOSE 8080
 
 CMD ["/app/server", "8080"]

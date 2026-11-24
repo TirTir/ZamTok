@@ -55,4 +55,5 @@ spec:
   ports:
     - port: 9000
       targetPort: 9000
-  type: ClusterIP
+      nodePort: 30090
+  type: NodePort

@@ -230,6 +230,8 @@ int http_login(int socket, const char *buf, req_t *t_request)
 {
 	user_t t_user = {0};
 	user_t t_stored_user = {0};
+	char str_session[SESSION_TOKEN_SIZE] = {0};
+	char str_data_json[USER_ID_MAX_LEN + USER_NAME_MAX_LEN + SESSION_TOKEN_SIZE + 64] = {0};
 	res_t *pt_response = NULL;
 	const char *pstr_body = NULL;
 	int rc = 0;
@@ -274,6 +276,22 @@ int http_login(int socket, const char *buf, req_t *t_request)
 		goto next;
 	}
 
+	rc = redis_sub_user(t_user.user_id, strlen(t_user.user_id));
+	if (rc != ZT_RC_OK) {
+		status = HTTP_INTERNAL_SERVER_ERROR;
+		err_code = ZT_ERR_SERVER_ERROR;
+		goto next;
+	}
+
+	rc = session_create(t_user.user_id, str_session, sizeof(str_session));
+	if (rc != ZT_RC_OK) {
+		status = HTTP_INTERNAL_SERVER_ERROR;
+		err_code = ZT_ERR_SERVER_ERROR;
+		goto next;
+	}
+
+	snprintf(str_data_json, sizeof(str_data_json), LOGIN_DATA_FMT, t_user.user_id,
+		 t_stored_user.name, str_session);
 	e_result = RESULT_SUCCESS;
 	err_code = ZT_ERR_SUCCESS;
 
@@ -282,7 +300,8 @@ next:
 	if (pt_response == NULL)
 		return ZT_RC_REDIS;
 
-	generate_response_body(pt_response, e_result, err_code, NULL);
+	generate_response_body(pt_response, e_result, err_code,
+			       (e_result == RESULT_SUCCESS) ? str_data_json : NULL);
 	rc = hdl_send_http_json(socket, pt_response);
 	free(pt_response);
 
@@ -363,6 +382,13 @@ int http_create_room(int socket, const char *buf, req_t *t_request)
 		goto next;
 	}
 
+	rc = redis_sub_room(t_room.room_id, strlen(t_room.room_id));
+	if (rc != ZT_RC_OK) {
+		status = HTTP_INTERNAL_SERVER_ERROR;
+		err_code = ZT_ERR_SERVER_ERROR;
+		goto next;
+	}
+
 	snprintf(str_data_json, sizeof(str_data_json), CREATE_ROOM_DATA_FMT, t_room.room_id,
 		 t_room.channel_id);
 	e_result = RESULT_SUCCESS;
@@ -385,7 +411,8 @@ int http_search_room(int socket, const char *buf, req_t *t_request)
 {
 	room_t t_room = {0};
 	res_t *pt_response = NULL;
-	char str_data_json[ROOM_ID_MAX_LEN + 32] = {0};
+	char str_members_json[2048] = {0};
+	char str_data_json[ROOM_ID_MAX_LEN + USER_ID_MAX_LEN + ROOM_TYPE_MAX_LEN + 2048 + 96] = {0};
 	int rc = 0;
 	int status = HTTP_OK;
 	zt_err_code_t err_code = ZT_ERR_INVALID_PARAMS;
@@ -409,14 +436,24 @@ int http_search_room(int socket, const char *buf, req_t *t_request)
 		goto next;
 	}
 
-	rc = redis_room_get(t_room.room_id, &t_room);
+	{
+		/* redis_room_get clears out_room before reading the key */
+		char str_room_id[ROOM_ID_MAX_LEN];
+
+		snprintf(str_room_id, sizeof(str_room_id), "%s", t_room.room_id);
+		rc = redis_room_get(str_room_id, &t_room);
+	}
 	if (rc != ZT_RC_OK) {
 		status = HTTP_NOT_FOUND;
 		err_code = ZT_ERR_ROOM_NOT_FOUND;
 		goto next;
 	}
 
-	snprintf(str_data_json, sizeof(str_data_json), SEARCH_ROOM_DATA_FMT, t_room.room_id);
+	if (room_members_json(t_room.room_id, str_members_json, sizeof(str_members_json)) != ZT_RC_OK)
+		snprintf(str_members_json, sizeof(str_members_json), "%s", "[]");
+
+	snprintf(str_data_json, sizeof(str_data_json), SEARCH_ROOM_DATA_FMT, t_room.room_id,
+		 t_room.creator_id, t_room.room_type, str_members_json);
 	e_result = RESULT_SUCCESS;
 	err_code = ZT_ERR_SUCCESS;
 
@@ -479,6 +516,36 @@ int http_join_room(int socket, const char *buf, req_t *t_request)
 	if (strcmp(t_stored_room.password, t_room.password) != 0) {
 		status = HTTP_UNAUTHORIZED;
 		err_code = ZT_ERR_WRONG_PASSWORD;
+		goto next;
+	}
+
+	/* Optional session_id: register as a room member. */
+	{
+		char str_session[SESSION_TOKEN_SIZE + 1] = {0};
+		char str_user_id[USER_ID_MAX_LEN] = {0};
+
+		if (msg_copy_json_string_field(pstr_body, SESSION_ID_KEY, str_session,
+					       sizeof(str_session)) == ZT_RC_OK) {
+			rc = session_get_user(str_session, str_user_id, sizeof(str_user_id));
+			if (rc != ZT_RC_OK) {
+				status = (rc == ZT_RC_FAIL) ? HTTP_UNAUTHORIZED : HTTP_INTERNAL_SERVER_ERROR;
+				err_code = (rc == ZT_RC_FAIL) ? ZT_ERR_INVALID_SESSION : ZT_ERR_SERVER_ERROR;
+				goto next;
+			}
+
+			rc = room_member_add(t_room.room_id, str_user_id);
+			if (rc != ZT_RC_OK) {
+				status = HTTP_INTERNAL_SERVER_ERROR;
+				err_code = ZT_ERR_SERVER_ERROR;
+				goto next;
+			}
+		}
+	}
+
+	rc = redis_sub_room(t_room.room_id, strlen(t_room.room_id));
+	if (rc != ZT_RC_OK) {
+		status = HTTP_INTERNAL_SERVER_ERROR;
+		err_code = ZT_ERR_SERVER_ERROR;
 		goto next;
 	}
 

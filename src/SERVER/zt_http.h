@@ -6,7 +6,7 @@
 #define METHOD_MAX_LEN 8
 #define URI_MAX_LEN 256
 #define VERSION_MAX_LEN 16
-#define BODY_MAX_LEN 4096
+#define BODY_MAX_LEN 8192
 #define HEADER_MAX_COUNT 16
 
 #define NAME_MAX_LEN 16
@@ -15,7 +15,7 @@
 #define HEADER_MAX_LEN 256
 #define CODE_MAX_LEN 64
 #define RES_JSON_MESSAGE_MAX_LEN 128
-#define DATA_MAX_LEN 1024
+#define DATA_MAX_LEN 16384
 #define REASON_MAX_LEN 64
 
 #define ROOM_MAX_COUNT 64
@@ -36,6 +36,7 @@
 	X(HTTP_NOT_FOUND, 404, "Not Found") \
 	X(HTTP_METHOD_NOT_ALLOWED, 405, "Method Not Allowed") \
 	X(HTTP_CONFLICT, 409, "Conflict") \
+	X(HTTP_PAYLOAD_TOO_LARGE, 413, "Payload Too Large") \
 	X(HTTP_INTERNAL_SERVER_ERROR, 500, "Internal Server Error") \
 	X(HTTP_NOT_IMPLEMENTED, 501, "Not Implemented") \
 	X(HTTP_BAD_GATEWAY, 502, "Bad Gateway") \
@@ -61,6 +62,10 @@ typedef enum {
 	X(MDN_ALREADY_EXISTS, "MDN_ALREADY_EXISTS", "mdn already exists") \
 	X(ROOM_ALREADY_EXISTS, "ROOM_ALREADY_EXISTS", "room already exists") \
 	X(NOT_FRIEND, "NOT_FRIEND", "member is not a friend") \
+	X(NOT_FOUND, "NOT_FOUND", "not found") \
+	X(TOO_LARGE, "TOO_LARGE", "request too large") \
+	X(INVALID_SESSION, "INVALID_SESSION", "invalid or expired session") \
+	X(NOT_MEMBER, "NOT_MEMBER", "not a room member") \
 	X(SERVER_ERROR, "SERVER_ERROR", "server error")
 
 typedef enum {
@@ -119,9 +124,10 @@ typedef struct {
 #define BODY_FMT "{\"success\":%s,\"code\":\"%s\",\"message\":\"%s\",\"data\":%s}"
 
 #define JOIN_DATA_FMT "{\"user_id\":\"%s\",\"mdn\":\"%s\"}"
-#define LOGIN_DATA_FMT "{\"user_id\":\"%s\"}"
+#define LOGIN_DATA_FMT "{\"user_id\":\"%s\",\"name\":\"%s\",\"session_id\":\"%s\"}"
 #define CREATE_ROOM_DATA_FMT "{\"room_id\":\"%s\",\"channel_id\":\"%s\"}"
-#define SEARCH_ROOM_DATA_FMT "{\"room_id\":\"%s\"}"
+#define SEARCH_ROOM_DATA_FMT \
+	"{\"room_id\":\"%s\",\"user_id\":\"%s\",\"room_type\":\"%s\",\"members\":%s}"
 #define JOIN_ROOM_DATA_FMT "{\"room_id\":\"%s\"}"
 #define LIST_ROOMS_DATA_FMT "{\"room_id\":\"%s\",\"user_id\":\"%s\",\"room_type\":\"%s\"}"
 #define LIST_FRIENDS_DATA_FMT "{\"user_id\":\"%s\",\"name\":\"%s\",\"mdn\":\"%s\"}"

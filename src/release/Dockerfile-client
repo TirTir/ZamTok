@@ -6,11 +6,11 @@ WORKDIR /build/CLIENT
 
 COPY CLIENT /build/CLIENT
 
-RUN mkdir -p /app \
+RUN mkdir -p /app/bin \
     && make \
-    && cp /build/CLIENT/release/CLIENT /app/client \
-    && chmod +x /app/client
+    && cp /build/CLIENT/release/CLIENT /app/bin/client \
+    && chmod +x /app/bin/client
 
 WORKDIR /app
 
-CMD ["./client"]
+CMD ["./bin/client"]

@@ -24,8 +24,11 @@ RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && \
     ldconfig
 
 # 서버 바이너리 복사
-COPY SERVER /app/server
+COPY release/SERVER /app/server
 RUN chmod +x /app/server
+
+COPY WEB/public/ /app/www/
+ENV ZT_WEB_ROOT=/app/www
 
 EXPOSE 8080
 

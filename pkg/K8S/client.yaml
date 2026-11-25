@@ -18,8 +18,8 @@ spec:
           image: tirtir0827/zamtok-client:latest
           imagePullPolicy: Always
 #         imagePullPolicy: IfNotPresent
-          command: ["sh", "-c"]
-          args: ["sleep infinity"]
+          command: ["./bin/client"]
+          args: ["test-server-service", "9000"]
 ---
 apiVersion: v1
 kind: Service

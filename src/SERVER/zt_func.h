@@ -21,6 +21,8 @@ int http_join_room(int sock_fd, const char *buf, req_t *request);
 int http_list_rooms(int sock_fd, const char *buf, req_t *request);
 int http_list_friends(int sock_fd, const char *buf, req_t *request);
 int http_invite_room(int sock_fd, const char *buf, req_t *request);
+int http_send_message(int sock_fd, const char *buf, req_t *request);
+int http_list_messages(int sock_fd, const char *buf, req_t *request);
 
 int hdl_accept(int listen_fd, int epfd);
 int hdl_socket(int epfd, int client_fd);

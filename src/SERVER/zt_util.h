@@ -15,6 +15,10 @@ int generate_response_body(res_t *pt_response, result_kind_t e_kind, zt_err_code
 			   const char *str_data_json);
 int msg_copy_json_string_field(const char *str_body, const char *str_key, char *str_out,
 			       size_t sz_out);
+int msg_copy_json_text_field(const char *str_body, const char *str_key, char *str_out,
+			     size_t sz_out);
+/* Returns length, or -1 if dst is too small. */
+int msg_json_escape(const char *str_src, char *str_dst, size_t sz_dst);
 
 int http_bind_json_fields(const char *str_body, http_json_field_spec_t *pt_fields, int i_size,
 			  int *pi_status, zt_err_code_t *pe_err_code);

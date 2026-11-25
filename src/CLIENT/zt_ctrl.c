@@ -74,9 +74,14 @@ static int ctrl_read_line(const char *prompt, char *out, size_t out_size)
 	if (!fgets(out, out_size, stdin))
 		return -1;
 
-	p = strchr(out, '\n');
+	p = strpbrk(out, "\r\n");
 	if (p)
 		*p = '\0';
+
+	if (!strcasecmp(out, "cancel") || !strcasecmp(out, "/cancel")) {
+		out[0] = '\0';
+		return -1;
+	}
 
 	return out[0] == '\0' ? -1 : 0;
 }

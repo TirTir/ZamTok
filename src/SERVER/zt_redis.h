@@ -27,6 +27,20 @@ int redis_room_get(const char *room_id, room_t *out_room);
 int redis_room_list(room_t *out_rooms, size_t max_rooms);
 int redis_room_invite(const char *room_id, const char *user_id, const char *members);
 
+redisContext *redis_get_ctx(void);
+
+int redis_sub_user(const char *user_id, size_t len);
+int redis_sub_room(const char *room_id, size_t len);
+
+typedef void (*redis_message_handler_t)(const char *channel, size_t channel_len,
+					const char *message, size_t message_len, void *userdata);
+/* handler는 Pub/Sub 수신 스레드에서 호출되므로 오래 블록하지 않아야 한다. */
+void redis_pubsub_set_message_handler(redis_message_handler_t handler, void *userdata);
+
+/* zt_redis.c에서 일반 Redis 연결과 동일한 수명으로 관리한다. */
+int redis_pubsub_init(const char *host, int port);
+void redis_pubsub_deinit(void);
+
 #define REDIS_USER_SAVE_CMD "HSET %s name %s pwd %s mdn %s created_at %s"
 #define REDIS_USER_GET_CMD "HMGET %s pwd name mdn"
 #define REDIS_MDN_SAVE_CMD "SET %s %s"
@@ -38,5 +52,8 @@ int redis_room_invite(const char *room_id, const char *user_id, const char *memb
 #define REDIS_USER_ROOM_ADD_CMD "SADD %s %s"
 #define REDIS_FRIEND_LIST_CMD "SMEMBERS %s"
 #define REDIS_IS_FRIEND_CMD "SISMEMBER %s %s"
+
+#define USER_CHANNEL_PREFIX "user:"
+#define ROOM_CHANNEL_PREFIX "room:"
 
 #endif

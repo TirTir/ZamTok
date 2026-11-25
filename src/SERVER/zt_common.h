@@ -2,7 +2,7 @@
 #define __ZT_COMMON_H__
 
 /* --- 프로젝트 전역 매크로 --- */
-#define BUF_MAX_LEN 1024
+#define BUF_MAX_LEN 8192
 #define FILE_MAX_LEN 256
 #define RETRY_MAX_CNT 3
 #define MAX_STATUS_MSG_LEN 64
@@ -40,6 +40,8 @@
 #include "zt_ctx.h"
 #include "zt_util.h"
 #include "zt_redis.h"
+#include "zt_session.h"
+#include "zt_msg.h"
 
 #define MAX_EVENTS 64
 #define CONTENT_TYPE_MAX_LEN 16

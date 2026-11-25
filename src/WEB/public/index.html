@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZamTok</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="4" width="24" height="17" rx="6" fill="#2457D6"></rect><path d="M9 21 L8 26 L14 21" fill="#2457D6"></path><circle cx="10" cy="12.5" r="1.6" fill="#fff"></circle><circle cx="14" cy="12.5" r="1.6" fill="#fff"></circle><circle cx="18" cy="12.5" r="1.6" fill="#fff"></circle></svg>
+    <span>ZamTok</span>
+  </div>
+  <span id="ws-status" class="pill pill-off" title="실시간 연결 상태">실시간 꺼짐</span>
+  <div class="spacer"></div>
+  <div id="user-box" class="user-box" hidden>
+    <div id="user-avatar" class="avatar"></div>
+    <div class="user-text"><b id="user-name"></b><span id="user-id"></span></div>
+    <button id="logout" class="btn2" type="button">로그아웃</button>
+  </div>
+</header>
+
+<div id="toast" class="toast" role="status" hidden>
+  <b id="toast-code"></b><span id="toast-text"></span>
+  <button id="toast-close" class="btn2 small" type="button">닫기</button>
+</div>
+
+<main class="layout">
+  <section id="auth" class="auth">
+    <div class="card auth-card">
+      <h1>ZamTok에 오신 것을 환영합니다</h1>
+      <div class="tabs" role="tablist">
+        <button id="tab-login" class="tab on" type="button" role="tab" aria-selected="true">로그인</button>
+        <button id="tab-signup" class="tab" type="button" role="tab" aria-selected="false">회원가입</button>
+      </div>
+      <form id="login-form" class="stack">
+        <label class="lbl">아이디 (user_id)<input class="inp" name="user_id" maxlength="15" autocomplete="username" required></label>
+        <label class="lbl">비밀번호<input class="inp" name="password" type="password" maxlength="15" autocomplete="current-password" required></label>
+        <button class="btn" type="submit">로그인</button>
+      </form>
+      <form id="signup-form" class="stack" hidden>
+        <label class="lbl">아이디 (user_id)<input class="inp" name="user_id" maxlength="15" required></label>
+        <label class="lbl">이름<input class="inp" name="name" maxlength="15" required></label>
+        <label class="lbl">비밀번호<input class="inp" name="password" type="password" maxlength="15" required></label>
+        <label class="lbl">전화번호 (mdn)<input class="inp" name="mdn" inputmode="numeric" maxlength="15" placeholder="01012345678" required></label>
+        <p class="hint">모든 항목은 최대 15자, 큰따옴표(")는 쓸 수 없습니다.</p>
+        <button class="btn" type="submit">가입하기</button>
+      </form>
+    </div>
+  </section>
+
+  <aside id="sidebar" class="sidebar" hidden>
+    <button id="to-create" class="btn wide" type="button">+ 새 채팅방 만들기</button>
+    <form id="search-form" class="row">
+      <label class="grow"><span class="sr">방 ID 검색</span><input class="inp" name="q" placeholder="방 ID로 검색 (예: study_alice)" required></label>
+      <button class="btn2" type="submit">검색</button>
+    </form>
+    <section class="card list-card">
+      <div class="list-head"><h2>채팅방</h2><span id="room-count" class="muted"></span><div class="spacer"></div><button id="refresh-rooms" class="btn2 small" type="button">새로고침</button></div>
+      <div id="room-list"></div>
+    </section>
+    <section class="card list-card">
+      <div class="list-head"><h2>친구</h2><span id="friend-count" class="muted"></span></div>
+      <div id="friend-list"></div>
+    </section>
+  </aside>
+
+  <section id="panel" class="card panel" hidden>
+    <div id="view-home" class="empty">
+      <h2>채팅방을 선택하세요</h2>
+      <p class="muted">왼쪽 목록에서 방을 고르거나, 방 ID로 검색하거나, 새 방을 만들 수 있습니다.</p>
+    </div>
+
+    <form id="view-create" class="stack create" hidden>
+      <div><h2>새 채팅방</h2><p class="muted">멤버는 친구 중에서만 고를 수 있습니다.</p></div>
+      <label class="lbl">방 이름 (room_id)<input class="inp" name="room_id" maxlength="40" required></label>
+      <p class="hint">실제 저장 ID: <code id="room-id-preview"></code></p>
+      <label class="lbl">입장 비밀번호<input class="inp" name="password" type="password" maxlength="15" required></label>
+      <fieldset class="stack"><legend class="lbl">방 유형</legend>
+        <div class="grid2">
+          <label class="chk"><input type="radio" name="room_type" value="1:1">1:1 <span class="muted">친구 정확히 1명</span></label>
+          <label class="chk"><input type="radio" name="room_type" value="1:N" checked>1:N <span class="muted">친구 1명 이상</span></label>
+        </div>
+      </fieldset>
+      <fieldset class="stack"><legend class="lbl">멤버 선택</legend><div id="create-options" class="stack"></div></fieldset>
+      <div class="row"><button class="btn" type="submit">방 만들기</button><button id="create-cancel" class="btn2" type="button">취소</button></div>
+    </form>
+
+    <div id="view-room" class="room" hidden>
+      <div class="room-head">
+        <div class="grow"><h2 id="room-title"></h2><span id="room-meta" class="muted"></span></div>
+        <button id="room-close" class="btn2" type="button">닫기</button>
+      </div>
+      <form id="join-gate" class="empty">
+        <h3>비밀번호가 필요한 방입니다</h3>
+        <div class="row narrow">
+          <label class="grow"><span class="sr">방 비밀번호</span><input class="inp" name="password" type="password" placeholder="방 비밀번호" required></label>
+          <button class="btn" type="submit">입장</button>
+        </div>
+      </form>
+      <div id="room-body" class="room-body" hidden>
+        <div class="chat">
+          <ol id="messages" class="messages" aria-live="polite"></ol>
+          <form id="send-form" class="row composer">
+            <label class="grow"><span class="sr">메시지</span><input class="inp" name="text" maxlength="300" autocomplete="off" placeholder="메시지 입력" required></label>
+            <button class="btn" type="submit">전송</button>
+          </form>
+        </div>
+        <div class="room-side">
+          <h3>멤버</h3>
+          <ul id="members" class="members"></ul>
+          <form id="invite-form" class="stack">
+            <h3>친구 초대</h3>
+            <div id="invite-options" class="stack"></div>
+            <button class="btn2" type="submit">초대 보내기</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <details id="log-box" class="log" open>
+    <summary>API 요청 로그</summary>
+    <button id="log-clear" class="btn-dark" type="button">지우기</button>
+    <div id="log-list"></div>
+  </details>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
